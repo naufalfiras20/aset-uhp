@@ -698,7 +698,7 @@ const stx=s=>{const[c,t]=ST[s]||['m',s];return pl(c,t)};
 const kox=s=>{const[c,t]=KD[s]||['m',s];return pl(c,t)};
 function loanOf(k){return DB.pinjam.find(l=>l.kode===k&&l.aktif)}
 const late=l=>dy(TODAY,l.jt);
-function qrText(k){const x=A(k);return x&&x.link?x.link:''}
+function qrText(k){const x=A(k);if(!x||!x.link)return'';const m=x.link.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]{15,})/);return m?('https://drive.google.com/uc?id='+m[1]):x.link}
 function polaFor(k){return DB.cfg.pola?DB.cfg.pola.replace(/\{kode\}/g,k):''}
 /* Satu link satu aset. Kalau dua aset berbagi link, hasil scan jadi ambigu
    dan stikernya kehilangan arti. Besar-kecil huruf diabaikan supaya
@@ -715,7 +715,7 @@ const QQ={ok:['g','Andal'],mid:['a','Marginal'],low:['r','Terlalu kecil'],no:['r
 function qrSpec(t){
  if(!t)return{n:0,ver:0,mod:0,tot:0,dots:0,modMm:0,w:'0',fit:false,q:'no',none:true};
  const n=t.length,ver=n<=16?1:n<=29?2:n<=42?3:n<=62?4:n<=84?5:6,mod=17+ver*4,tot=mod+8;
- const dm=dotMm(),W=pw();
+ const dm=dotMm(),W=Math.max(1,DB.cfg.label.w-2*Math.min(DB.cfg.label.mg,0.3));
  let dots=0;for(let i=8;i>=2;i--){if(tot*i*dm<=W){dots=i;break}}
  const fit=dots>0,modMm=dots*dm,w=(fit?tot*dots*dm:tot*3*dm);
  const q=!fit?'no':modMm>=0.375?'ok':modMm>=0.25?'mid':'low';
@@ -1893,7 +1893,7 @@ function printLabel(k){
   </div>
   <p style="font-size:11.5px;color:var(--lb3);margin-top:11px;line-height:1.5">QR di atas asli — coba pindai pakai HP untuk memastikan terbaca. Ukuran label diatur di Pengaturan.</p>`,
   `<button class="b" onclick="closeAll()">Tutup</button><button class="b s" onclick="togCetak('${k}')">${ic(x.dicetak?'x':'check')}${x.dicetak?'Batalkan tanda cetak':'Tandai sudah dicetak'}</button><button class="b" onclick="window.print()">${ic('print')}Cetak (browser)</button><button class="b n" onclick="bukaP15(['${k}'])">${ic('print')}Cetak ke P15</button>`);
- if(s.fit)new QRCode($('#lq'),{text:t,width:qpx,height:qpx,correctLevel:QRCode.CorrectLevel.Q});
+ if(s.fit)new QRCode($('#lq'),{text:t,width:qpx,height:qpx,correctLevel:QRCode.CorrectLevel.L});
  else $('#lq').innerHTML=`<div style="width:${Math.round(pw()*PX)}px;height:${Math.round(pw()*PX)}px;border:1px dashed #c33;display:flex;align-items:center;justify-content:center;font-size:8px;color:#c33;text-align:center">tidak<br>muat</div>`;
 }
 /* ═══════ CETAK KE PRINTER P15 (jembatan Bluetooth di GitHub Pages) ═══════
@@ -2096,7 +2096,7 @@ function labelMassal(){
    <p style="font-size:11.5px;color:var(--lb3);margin-top:11px;line-height:1.55">Pasang link dulu, atau pakai pola link di Pengaturan untuk mengisi massal.</p>`,
   `<button class="b" onclick="closeAll()">Tutup</button><button class="b n" onclick="closeAll();go('master')">Buka pengaturan</button>`);
  const L=DB.cfg.label,PX=6;
- const specs=ks.map(k=>qrSpec(A(k).link));
+ const specs=ks.map(k=>qrSpec(qrText(k)));
  const takMuat=specs.filter(s=>!s.fit).length;
  modal(`Cetak ${ks.length} label`,`
   ${tanpa?`<div style="background:var(--amB);border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:11.5px;color:var(--am);line-height:1.55">${tanpa} aset dilewati karena belum punya link.</div>`:''}
@@ -2110,7 +2110,7 @@ function labelMassal(){
   `<button class="b" onclick="closeAll()">Tutup</button><button class="b s" onclick="tandaiKode([${ks.map(k=>`'${k}'`).join(',')}],'label massal')">${ic('check')}Tandai ${ks.length} sudah dicetak</button><button class="b" onclick="window.print()">${ic('print')}Cetak (browser)</button><button class="b n" onclick="bukaP15([${ks.map(k=>`'${k}'`).join(',')}])">${ic('print')}Cetak ${ks.length} ke P15</button>`,600);
  ks.forEach((k,i)=>{const el=$('#mq'+i);if(!el)return;const s=specs[i];
   if(s.fit){const px=Math.max(20,Math.round(+s.w*PX));
-   new QRCode(el,{text:A(k).link,width:px,height:px,correctLevel:QRCode.CorrectLevel.Q});
+   new QRCode(el,{text:qrText(k),width:px,height:px,correctLevel:QRCode.CorrectLevel.L});
   }else{const bx=Math.max(20,Math.round(pw()*PX));
    el.innerHTML=`<div style="width:${bx}px;height:${bx}px;border:1px dashed #c33;font-size:6px;color:#c33;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.15">tidak<br>muat</div>`}});
 }
