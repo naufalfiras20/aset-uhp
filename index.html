@@ -1260,7 +1260,14 @@ function vMaster(){
    </div>
    <p style="font-size:11.5px;color:var(--lb3);margin-top:10px;line-height:1.5"><b>Panjang label tidak memengaruhi ukuran QR.</b> QR itu persegi, jadi yang membatasi selalu sisi tersempit. Label ${L.h}mm cuma memberi lebih banyak ruang untuk teks di samping QR.</p>
   </div></div>
-  <div class="gh" style="margin-top:16px">Foto</div><div class="cd"><div class="cdh"><div class="cdt">Penyimpanan</div></div><div class="cdb">
+  <div class="gh" style="margin-top:16px">Template label</div><div class="cd"><div class="cdh"><div class="cdt">Isi label</div></div><div class="cdb">
+   <div class="f2"><div class="fl"><label>Tampilkan nama merek</label><select class="in" id="tplOn"><option value="1" ${T().brandOn?'selected':''}>Ya</option><option value="0" ${!T().brandOn?'selected':''}>Tidak</option></select></div>
+   <div class="fl"><label>Nama merek</label><input class="in" id="tplBrand" type="text" maxlength="40" value="${es(T().brand)}"></div></div>
+   <div class="f2" style="margin-top:8px"><div class="fl"><label>Ukuran merek (px)</label><input class="in" id="tplFB" type="number" step="0.5" min="6" value="${T().fBrand}"></div>
+   <div class="fl"><label>Ukuran kode (px)</label><input class="in" id="tplFK" type="number" step="0.5" min="6" value="${T().fKode}"></div></div>
+   <div class="f2" style="margin-top:8px"><div class="fl"><label>Ukuran nama aset (px)</label><input class="in" id="tplFN" type="number" step="0.5" min="6" value="${T().fNama}"></div></div>
+   <p style="font-size:11px;color:var(--lb3);margin-top:8px">Berlaku di pratinjau label, cetak massal, dan saat dikirim ke P15.</p>
+</div></div><div class="gh" style="margin-top:16px">Foto</div><div class="cd"><div class="cdh"><div class="cdt">Penyimpanan</div></div><div class="cdb">
    <div class="ins"><div class="kr"><dt>Lokasi</dt><dd>Google Drive — satu folder</dd></div>
    <div class="kr"><dt>Penamaan</dt><dd class="mn">KODE-ASET.jpg</dd></div>
    <div class="kr"><dt>Disimpan aplikasi</dt><dd>ID file, bukan filenya</dd></div></div>
@@ -1863,6 +1870,7 @@ function doMDel(set,k){
  log('HAPUS','MASTER',k,`${it.n} (${k}) dihapus dari ${set}`);
  toast(it.n+' dihapus','g');closeAll();render();
 }
+function T(){const k=DB.cfg.tpl||{};return{brand:k.brand||'Upscale House',brandOn:k.brandOn!==false,fBrand:+k.fBrand||10.5,fKode:+k.fKode||15,fNama:+k.fNama||11}}
 function printLabel(k){
  const t=qrText(k),s=qrSpec(t),x=A(k);
  if(!t)return modal('Label belum bisa dicetak',`<div style="background:var(--amB);border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--am);line-height:1.5"><b>${es(x.nama)}</b> belum punya link, jadi QR-nya belum ada.</div>
@@ -1874,7 +1882,7 @@ function printLabel(k){
    <div style="text-align:center">
     <div class="lbp" style="width:${Math.round(L.h*PX)}px;height:${Math.round(L.w*PX)}px;padding:${Math.round(L.mg*PX)}px;box-sizing:border-box;align-items:center">
      <div id="lq" style="flex-shrink:0"></div>
-     <div style="min-width:0;overflow:hidden"><div class="n1">Upscale House</div><div class="n2">${k}</div><div class="n3">${es(x.nama.slice(0,18))}</div></div>
+     <div style="min-width:0;overflow:hidden">${T().brandOn?`<div class="n1" style="font-size:${T().fBrand}px">${es(T().brand)}</div>`:''}<div class="n2" style="font-size:${T().fKode}px">${k}</div><div class="n3" style="font-size:${T().fNama}px">${es(x.nama.slice(0,18))}</div></div>
     </div>
     <div style="font-size:10.5px;color:var(--lb3);margin-top:7px">${L.h} × ${L.w} mm · skala kira-kira</div>
    </div>
@@ -1885,7 +1893,7 @@ function printLabel(k){
   <div class="ins" style="margin-top:13px">
    <div class="kr"><dt>Isi QR</dt><dd class="mn" style="font-size:10.5px;word-break:break-all;text-align:right">${es(t)}</dd></div>
    <div class="kr"><dt>Versi QR</dt><dd>${s.ver} (${s.mod}×${s.mod} modul)</dd></div>
-   <div class="kr"><dt>Koreksi galat</dt><dd>Q — toleransi 25%</dd></div>
+   <div class="kr"><dt>Koreksi galat</dt><dd>L — toleransi 7%</dd></div>
    <div class="kr"><dt>Ukuran modul</dt><dd>${s.modMm?s.modMm.toFixed(3)+' mm ('+s.dots+' titik)':'—'}</dd></div>
    <div class="kr"><dt>Lebar QR</dt><dd style="${s.fit?'':'color:var(--rd)'}">${s.w} mm</dd></div>
    <div class="kr"><dt>Area cetak</dt><dd>${pw().toFixed(1)} mm</dd></div>
@@ -1909,7 +1917,7 @@ function payloadP15(kodeList){
  const L=DB.cfg.label;
  return{
   label:kodeList.map(k=>{const x=A(k);return{kode:k,nama:x?x.nama:k,link:x?x.link:''}}),
-  cfg:{lebarMm:L.w,tinggiMm:L.h,marginMm:L.mg,dpi:L.dpi,kertas:'celah'}
+  cfg:{lebarMm:L.w,tinggiMm:L.h,marginMm:L.mg,dpi:L.dpi,kertas:'celah',tpl:T()}
  };
 }
 function bukaP15(kodeList){
@@ -2104,7 +2112,7 @@ function labelMassal(){
   <div style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;max-height:52vh;overflow-y:auto;padding:14px;background:var(--surf2);border-radius:10px">
    ${ks.map((k,i)=>`<div class="lbp" style="width:${Math.round(L.h*PX)}px;height:${Math.round(L.w*PX)}px;padding:${Math.round(L.mg*PX)}px;box-sizing:border-box;align-items:center;overflow:hidden">
     <div id="mq${i}" style="flex-shrink:0"></div>
-    <div style="min-width:0;overflow:hidden"><div class="n1">Upscale House</div><div class="n2">${k}</div><div class="n3">${es(A(k).nama.slice(0,16))}</div></div></div>`).join('')}
+    <div style="min-width:0;overflow:hidden">${T().brandOn?`<div class="n1" style="font-size:${T().fBrand}px">${es(T().brand)}</div>`:''}<div class="n2" style="font-size:${T().fKode}px">${k}</div><div class="n3" style="font-size:${T().fNama}px">${es(A(k).nama.slice(0,16))}</div></div></div>`).join('')}
   </div>
   <p style="font-size:11.5px;color:var(--lb3);margin-top:11px;line-height:1.55">Ukuran ${L.h} × ${L.w} mm per label. Tekan Cetak lalu pilih printer ${L.w}mm — susunan label mengikuti lembar cetak printer.</p>`,
   `<button class="b" onclick="closeAll()">Tutup</button><button class="b s" onclick="tandaiKode([${ks.map(k=>`'${k}'`).join(',')}],'label massal')">${ic('check')}Tandai ${ks.length} sudah dicetak</button><button class="b" onclick="window.print()">${ic('print')}Cetak (browser)</button><button class="b n" onclick="bukaP15([${ks.map(k=>`'${k}'`).join(',')}])">${ic('print')}Cetak ${ks.length} ke P15</button>`,600);
@@ -2512,6 +2520,11 @@ function bind(){
  [['#lbW','w'],['#lbH','h'],['#lbM','mg'],['#lbD','dpi']].forEach(([s,f])=>{const e=$(s);
   if(e)e.onchange=()=>{const v=+e.value;if(v>0){DB.cfg.label[f]=v;render();
     simpanKonfig({['label_'+f]:v}).catch(err=>toast(err.message,'r'))}}});
+ [['#tplOn','brandOn',v=>v==='1'],['#tplBrand','brand',v=>v],['#tplFB','fBrand',v=>+v||10.5],['#tplFK','fKode',v=>+v||15],['#tplFN','fNama',v=>+v||11]].forEach(([s,f,cv])=>{
+  const e=$(s);
+  if(e)e.onchange=()=>{const t=Object.assign({},T());t[f]=cv(e.value);DB.cfg.tpl=t;render();
+    simpanKonfig({['tpl_'+f]:t[f]}).catch(err=>toast(err.message,'r'))}
+ });
  $$('[data-madd]').forEach(e=>e.onclick=()=>mAdd(e.dataset.madd));
  $$('[data-med]').forEach(e=>e.onclick=()=>{const[s,k]=e.dataset.med.split('|');mEdit(s,k)});
  $$('[data-mdl]').forEach(e=>e.onclick=()=>{const[s,k]=e.dataset.mdl.split('|');mDel(s,k)});
@@ -2953,6 +2966,7 @@ function pasangData(d){
   const K=d.konfig||{};
   DB.cfg.pola=K.pola||'';
   DB.cfg.label={w:+K.label_w||12,h:+K.label_h||40,mg:+(K.label_mg||0.5),dpi:+K.label_dpi||203};
+  DB.cfg.tpl={brand:K.tpl_brand||'Upscale House',brandOn:K.tpl_brandOn!==false,fBrand:+K.tpl_fBrand||10.5,fKode:+K.tpl_fKode||15,fNama:+K.tpl_fNama||11};
   if(K.bahasa==='en'&&LANG!=='en')LANG='en';
 
   if(d.rekon&&d.rekon.length){
