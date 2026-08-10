@@ -2507,9 +2507,11 @@ function bind(){
  const ll=$('#lpL');if(ll)ll.onchange=()=>{LAP.lok=ll.value;render()};
  b2('#lpExp',lapCsv);b2('#lpPrint',()=>window.print());
  $$('[data-lp]').forEach(e=>e.onclick=()=>{const[a,b2]=e.dataset.lp.split('|').map(Number);
-  DB.cfg.label.w=a;DB.cfg.label.h=b2;log('UBAH','KONFIG','label',`Ukuran label ${a} × ${b2} mm`);toast(`Label ${a} × ${b2} mm`,'g');render()});
+  DB.cfg.label.w=a;DB.cfg.label.h=b2;render();
+  simpanKonfig({label_w:a,label_h:b2}).catch(err=>toast(err.message,'r'))});
  [['#lbW','w'],['#lbH','h'],['#lbM','mg'],['#lbD','dpi']].forEach(([s,f])=>{const e=$(s);
-  if(e)e.onchange=()=>{const v=+e.value;if(v>0){DB.cfg.label[f]=v;log('UBAH','KONFIG','label',`${f} = ${v}`);render()}}});
+  if(e)e.onchange=()=>{const v=+e.value;if(v>0){DB.cfg.label[f]=v;render();
+    simpanKonfig({['label_'+f]:v}).catch(err=>toast(err.message,'r'))}}});
  $$('[data-madd]').forEach(e=>e.onclick=()=>mAdd(e.dataset.madd));
  $$('[data-med]').forEach(e=>e.onclick=()=>{const[s,k]=e.dataset.med.split('|');mEdit(s,k)});
  $$('[data-mdl]').forEach(e=>e.onclick=()=>{const[s,k]=e.dataset.mdl.split('|');mDel(s,k)});
