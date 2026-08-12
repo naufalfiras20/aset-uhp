@@ -2055,7 +2055,7 @@ function batalLepas(k){
  x.lepas=null;x.stat='TERSEDIA';toast('Pelepasan dibatalkan','g');closeAll();openAsset(k);render();
 }
 function vLepas(){
- const r=DB.aset.filter(x=>x.stat==='DILEPAS').sort((a,b)=>b.lepas.tgl-a.lepas.tgl);
+ const r=DB.aset.filter(x=>x.stat==='DILEPAS'&&x.lepas).sort((a,b)=>b.lepas.tgl-a.lepas.tgl);
  const tNb=r.reduce((s,x)=>s+x.lepas.nbSaat,0),tHs=r.reduce((s,x)=>s+x.lepas.nilai,0);
  return`
  <div class="sts" style="grid-template-columns:repeat(4,1fr)">
@@ -2714,7 +2714,7 @@ async function supaMuat() {
   const { data: { user } } = await supa.auth.getUser();
   if (!user) throw new Error('Belum login.');
 
-  const [pRow, master, aset, mutasi, pinjam, rawat, hapus, rekon, audit, konfig,
+  const [pRow, master, aset, mutasi, pinjam, rawat, hapus, lepas, rekon, audit, konfig,
          opnameSesi, opnameDetail, izinRow] = await Promise.all([
     supa.from('pengguna').select('*').eq('id', user.id).single().then(r => r.data),
     supa.from('master').select('*').eq('aktif', true).order('urut'),
@@ -2722,7 +2722,7 @@ async function supaMuat() {
     supa.from('mutasi').select('*'),
     supa.from('pinjam').select('*'),
     supa.from('rawat').select('*'),
-    supa.from('hapus').select('*'),
+    supa.from('hapus').select('*'), supa.from('lepas').select('*'),
     supa.from('rekon').select('*'),
     supa.from('log_audit').select('*').order('waktu', { ascending: false }).limit(300),
     supa.from('konfig').select('*'),
@@ -2737,7 +2737,7 @@ async function supaMuat() {
   const izinRes = await supa.from('peran_izin').select('izin').eq('peran', pRow.peran);
   const izin = cekGalat(izinRes).map(x => x.izin);
 
-  const masterRows = cekGalat(master);
+  const masterRows = cekGalat(master); const lepasMap = {}; cekGalat(lepas).forEach(l => { lepasMap[l.kode] = petakan(l, PETA_LEPAS); });
   const grup = (s) => masterRows.filter(m => m.set_ === s).map(m => ({ k: m.kode, n: m.nama }));
 
   const konfigObj = {};
@@ -2754,7 +2754,7 @@ async function supaMuat() {
     pengguna: { nama: pRow.nama, inisial: (pRow.nama || pRow.email).charAt(0).toUpperCase(),
       peran: pRow.peran, email: pRow.email },
     izin,
-    aset: petakan(cekGalat(aset), PETA_ASET),
+    aset: petakan(cekGalat(aset), PETA_ASET).map(x => Object.assign(x, { lepas: lepasMap[x.kode] || null })),
     dept: grup('dept'), kat: grup('kat'), lok: grup('lok'), org: grup('org'), proy: grup('proy'),
     mutasi: cekGalat(mutasi),
     pinjam: petakan(cekGalat(pinjam), PETA_PINJAM),
