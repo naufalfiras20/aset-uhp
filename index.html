@@ -1593,13 +1593,13 @@ function scanOpname(k){
  toast(x.nama+(d.st==='DITEMUKAN'?' — sesuai':' — lokasi berbeda'),d.st==='DITEMUKAN'?'g':'');
  render();$('#opI')?.focus();
 }
-let CAMSCAN=null;function scanKamera(){
+function closeOpname(){
  const o=DB.opname,bm=o.detail.filter(x=>x.st==='BELUM');
  modal('Tutup sesi opname',`<p style="font-size:12.5px;color:var(--lb2);margin-bottom:12px;line-height:1.5">${bm.length} aset belum diperiksa. Pilih status tiap aset — default tidak ditemukan (jadi hilang), atau tandai ada bila ditemukan manual.</p>
  ${bm.length?`<div class="ins" style="max-height:220px;overflow-y:auto">${bm.map(s=>`<div class="kr"><dt class="mn">${s.kode}</dt><dd style="text-align:right"><div style="font-size:11.5px;color:var(--lb3);margin-bottom:3px">${es(namaAset(s.kode).slice(0,24))}</div><select class="in" data-belum="${s.kode}" style="font-size:11.5px;padding:3px 6px;width:auto"><option value="tidak">Tidak ditemukan</option><option value="ada">Ada</option></select></dd></div>`).join('')}</div>`:'<p style="font-size:12.5px;color:var(--gr)">Semua aset sudah diperiksa.</p>'}`,
  `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="doC">Tutup sesi</button>`);
 }
-function doCloseOpname(){
+let CAMSCAN=null;function scanKamera(){modal('Pindai QR',`<div style="text-align:center"><video id="camVid" style="width:100%;max-width:320px;border-radius:9px;background:#000"></video><p style="font-size:11.5px;color:var(--lb3);margin-top:8px">Arahkan kamera ke QR pada label aset</p></div>`,`<button class="b" onclick="closeAll()">Selesai</button>`);const v=$('#camVid');let last='',lastT=0;CAMSCAN=new QrScanner(v,r=>{const k=(r.data||r).trim();const now=Date.now();if(k===last&&now-lastT<1500)return;last=k;lastT=now;scanOpname(k)},{highlightScanRegion:true,highlightCodeOutline:true});CAMSCAN.start().catch(e=>toast('Gagal buka kamera: '+e.message,'r'))}function doCloseOpname(){
  const o=DB.opname;let h=0;
  o.detail.forEach(d=>{if(d.st==='BELUM'){d.st='TIDAK_DITEMUKAN';const x=A(d.kode);
   mutasi(d.kode,'KONDISI',KD[x.kond][1],'Hilang',`Tidak ditemukan saat opname ${o.nama}`);
