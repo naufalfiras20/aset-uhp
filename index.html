@@ -3115,9 +3115,27 @@ startOpname=async function(){
   toast('Sesi opname dibuka','g');
 };
 scanOpname=async function(k){
-  try{ const r=await aksi('apiPindaiOpname',k); toast(r&&r.st==='DITEMUKAN'?'Sesuai':'Lokasi berbeda',
-    r&&r.st==='DITEMUKAN'?'g':''); }catch(e){}
-  const el=$('#opI'); if(el){el.value='';el.focus()}
+ const el=$('#opI');
+ let r;
+ try{ r=await aksi('apiPindaiOpname',k); }catch(e){ if(el){el.value='';el.focus()} return }
+ if(el)el.value='';
+ if(typeof CAMSCAN!=='undefined'&&CAMSCAN){CAMSCAN.destroy();CAMSCAN=null}
+ const x=A(k);
+ if(!r||!x){ if(el)el.focus(); return }
+ const opts=Object.entries(KD).map(([kk,v])=>`<option value="${kk}" ${x.kond===kk?'selected':''}>${v[1]}</option>`).join('');
+ modal('Konfirmasi kondisi',`<p style="font-size:12.5px;color:var(--lb2);margin-bottom:12px;line-height:1.5">${es(x.nama)} (${x.kode}) — ${r.st==='DITEMUKAN'?'lokasi sesuai':'lokasi berbeda'}. Konfirmasi kondisi aset saat ini sebelum lanjut.</p><select id="opKondM" class="in" style="width:100%">${opts}</select>`,`<button class="b p" id="opKondOk">Konfirmasi & lanjut</button>`);
+ const ok=$('#opKondOk');
+ if(ok)ok.onclick=async()=>{
+  const nv=$('#opKondM').value;
+  if(nv!==x.kond){
+   try{ await aksi('apiKondisiOpname',x.kode,nv); toast(x.nama+' → '+KD[nv][1],'g'); }
+   catch(e){ toast('Gagal simpan kondisi: '+e.message,'r'); }
+  } else {
+   toast(r.st==='DITEMUKAN'?'Sesuai':'Lokasi berbeda', r.st==='DITEMUKAN'?'g':'');
+  }
+  closeAll();
+  const el2=$('#opI'); if(el2)el2.focus();
+ };
 };
 doCloseOpname=async function(){
   const ada=[...document.querySelectorAll('[data-belum]')].filter(s=>s.value==='ada').map(s=>s.dataset.belum);await aksi('apiTutupOpname',ada);
