@@ -2722,7 +2722,7 @@ async function supaMuat() {
     supa.from('mutasi').select('*'),
     supa.from('pinjam').select('*'),
     supa.from('rawat').select('*'),
-    supa.from('hapus').select('*'), supa.from('lepas').select('*'),
+    supa.from('hapus').select('*'), supa.from('lepas').select('*').order('dicatat', { ascending: true }),
     supa.from('rekon').select('*'),
     supa.from('log_audit').select('*').order('waktu', { ascending: false }).limit(300),
     supa.from('konfig').select('*'),
