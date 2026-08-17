@@ -365,7 +365,7 @@ const I={
  alert:'<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6A2 2 0 0 0 22 18L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
  check:'<path d="M20 6 9 17l-5-5"/>',
  box:'<path d="M21 8v8a2 2 0 0 1-1 1.7l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8a2 2 0 0 1 1-1.7l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/>',
- money:'<path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+ money:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
  img:'<rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="m21 15-5-5L5 21"/>',
  print:'<path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/>',
  dl:'<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',
@@ -654,7 +654,7 @@ function setLang(l){LANG=l;document.documentElement.lang=l;log('UBAH','KONFIG','
 /* ═══════ UTIL ═══════ */
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const rp=n=>'Rp '+Math.round(n).toLocaleString('id-ID');
-const rpk=n=>n>=1e9?(n/1e9).toFixed(2).replace('.',',')+' M':n>=1e6?Math.round(n/1e6)+' jt':Math.round(n).toLocaleString('id-ID');
+const rpk=n=>'Rp '+(n>=1e9?(n/1e9).toFixed(2).replace('.',',')+' M':n>=1e6?Math.round(n/1e6)+' jt':Math.round(n).toLocaleString('id-ID'));
 const dt=d=>d?d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
 const ds=d=>d?d.toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—';
 const dy=(x,y)=>Math.round((x-y)/864e5);
