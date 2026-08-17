@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Aset UHP</title>
 <style>
 :root{
@@ -3301,7 +3304,7 @@ async function kelolaPengguna(){
   try{ daftar = await srv('apiDaftarPengguna'); }
   catch(e){ return toast(e.message,'r'); }
   const baris = p => `<tr data-username="${es(p.username)}">
-    <td>${es(p.username)}${p.pemilik?' <span style="color:var(--lb4);font-size:10.5px">(pemilik)</span>':''}</td>
+    <td><input class="in pgU" value="${es(p.username)}" style="width:120px" minlength="6" maxlength="18" ${p.pemilik?'disabled':''}>${p.pemilik?' <span style="color:var(--lb4);font-size:10.5px">(pemilik)</span>':''}</td>
     <td><input class="in pgN" value="${es(p.nama)}" style="width:120px" ${p.pemilik?'disabled':''}></td>
     <td><select class="in pgP" ${p.pemilik?'disabled':''}>${['ADMIN','AKUNTANSI','PETUGAS','PENGAMAT'].map(x=>
       `<option value="${x}" ${p.peran===x?'selected':''}>${x}</option>`).join('')}</select></td>
@@ -3316,7 +3319,9 @@ async function kelolaPengguna(){
   modal('Kelola pengguna', `
     <p style="font-size:11.5px;color:var(--lb3);margin-bottom:10px;line-height:1.55">Hanya pemilik akun
       yang bisa membuat, mengubah akses, mengatur ulang sandi, atau menghapus akun di sini. Pendaftaran
-      mandiri sudah dimatikan — semua akun baru dibuat langsung dari sini, pakai username, bukan email.</p>
+      mandiri sudah dimatikan — semua akun baru dibuat langsung dari sini, pakai username, bukan email.
+      Ubah username atau reset sandi langsung mencabut sesi login orang itu — dia harus masuk ulang pakai
+      kredensial baru.</p>
     <div class="ins" style="margin-bottom:12px">${legendPeran}</div>
     <button class="b n" id="pgTambah" style="margin-bottom:10px">+ Tambah pengguna baru</button>
     <div style="max-height:50vh;overflow:auto"><table style="width:100%">
@@ -3327,12 +3332,18 @@ async function kelolaPengguna(){
   document.querySelectorAll('.pgSim').forEach(btn=>{
     btn.onclick = async ()=>{
       const tr = btn.closest('tr');
-      const username = tr.dataset.username;
+      let username = tr.dataset.username;
+      const usernameBaru = tr.querySelector('.pgU').value.trim().toLowerCase();
       const nama = tr.querySelector('.pgN').value.trim();
       const peran = tr.querySelector('.pgP').value;
       const aktif = tr.querySelector('.pgA').checked;
+      if(usernameBaru.length < 6 || usernameBaru.length > 18) return toast('Username harus 6-18 karakter','r');
       btn.disabled = true; btn.textContent='...';
       try{
+        if(usernameBaru !== username){
+          await panggilKelolaAkun({ aksi:'ubah_username', username_lama: username, username_baru: usernameBaru });
+          username = usernameBaru; tr.dataset.username = usernameBaru;
+        }
         await srv('apiSimpanPengguna', username, nama, peran, aktif);
         toast(nama+' disimpan','g');
         btn.textContent='Simpan'; btn.disabled=false;
