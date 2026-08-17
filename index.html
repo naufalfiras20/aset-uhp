@@ -2644,10 +2644,8 @@ function tampilkanLogin(pesan) {
       font-size:13.5px;margin-bottom:14px">
     <button id="gMasuk" style="width:100%;padding:10px;border:none;border-radius:9px;background:#072B54;
       color:#fff;font-size:13.5px;font-weight:500;cursor:pointer;margin-bottom:8px">Masuk</button>
-    <button id="gDaftar" style="width:100%;padding:10px;border:1px solid #e3e3e8;border-radius:9px;
-      background:#fff;color:#1a1a1a;font-size:13.5px;font-weight:500;cursor:pointer">Daftar akun baru</button>
-    <p style="font-size:11.5px;color:#8a8a94;margin:14px 0 0;line-height:1.6">Akun baru butuh persetujuan
-      admin sebelum bisa dipakai — daftar dulu, lalu minta admin mengaktifkan lewat menu Pengguna.</p>
+    <p style="font-size:11.5px;color:#8a8a94;margin:14px 0 0;line-height:1.6">Belum punya akun? Pendaftaran
+      mandiri sudah dimatikan — hubungi pemilik akun untuk dibuatkan akun baru.</p>
   </div>`;
   document.body.appendChild(el);
 
@@ -2669,16 +2667,6 @@ function tampilkanLogin(pesan) {
     if (error) throw error;
     el.style.display = 'none';
     mulaiSetelahLogin();
-  });
-  document.getElementById('gDaftar').onclick = () => jalan(async (email, sandi) => {
-    const nama = prompt('Nama lengkap untuk akun ini:', '') || email;
-    const { error } = await supa.auth.signUp({ email, password: sandi, options: { data: { nama } } });
-    if (error) throw error;
-    const pesanEl = document.getElementById('gerbangPesan');
-    pesanEl.style.display = '';
-    pesanEl.style.color = '#1B7F4B';
-    pesanEl.textContent = 'Akun dibuat. Kalau kamu orang pertama, langsung aktif sebagai admin — coba Masuk. '
-      + 'Kalau bukan, minta admin mengaktifkan akunmu dulu.';
   });
 }
 
@@ -2754,7 +2742,7 @@ async function supaMuat() {
 
   return {
     pengguna: { nama: pRow.nama, inisial: (pRow.nama || pRow.email).charAt(0).toUpperCase(),
-      peran: pRow.peran, email: pRow.email },
+      peran: pRow.peran, email: pRow.email, pemilik: !!pRow.pemilik },
     izin,
     aset: petakan(cekGalat(aset), PETA_ASET).map(x => Object.assign(x, { lepas: lepasMap[x.kode] || null })),
     dept: grup('dept'), kat: grup('kat'), lok: grup('lok'), org: grup('org'), proy: grup('proy'),
@@ -2943,7 +2931,7 @@ async function muatUlang(){
 }
 
 function pasangData(d){
-  USER={nama:d.pengguna.nama,inisial:d.pengguna.inisial,peran:d.pengguna.peran,email:d.pengguna.email};
+  USER={nama:d.pengguna.nama,inisial:d.pengguna.inisial,peran:d.pengguna.peran,email:d.pengguna.email,pemilik:!!d.pengguna.pemilik};
   IZIN_SERVER=d.izin||[];
 
   DB.aset=d.aset.map(a=>{
@@ -3293,32 +3281,46 @@ PRD-LGT-091,Kondisi ngawur,LGT,PRD,GDA,Butut banget,3000000,0,48,2026-01-01,Z,`;
 }
 
 /* ── 9. Kelola Pengguna (baru — tidak ada di versi Apps Script) ──
-   Login sekarang lewat email+password Supabase, bukan akun Google
-   Workspace, jadi admin butuh cara mengaktifkan pengguna baru & memberi
-   peran tanpa buka SQL Editor. Dipasang di tombol badge pengguna
-   (#uBox) — kalau bukan admin, tombol itu cuma menampilkan info peran. */
+   Hanya pemilik akun (USER.pemilik, ditentukan server-side lewat kolom
+   pengguna.pemilik — bukan role ADMIN biasa) yang boleh membuka ini.
+   Buat/hapus akun login butuh Admin API (service role), jadi lewat Edge
+   Function 'kelola-akun', bukan RPC Postgres biasa. */
+async function panggilKelolaAkun(body){
+  const { data, error } = await supa.functions.invoke('kelola-akun', { body });
+  if (error) {
+    let pesan = error.message || 'Terjadi kesalahan.';
+    try{ const isi = await error.context.json(); if(isi?.error) pesan = isi.error; }catch(e){}
+    throw new Error(pesan);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
 async function kelolaPengguna(){
-  if(!can('master')) return toast('Hanya admin yang bisa mengelola pengguna','r');
+  if(!USER.pemilik) return toast('Hanya pemilik akun yang bisa mengelola pengguna','r');
   let daftar;
   try{ daftar = await srv('apiDaftarPengguna'); }
   catch(e){ return toast(e.message,'r'); }
   const baris = p => `<tr data-email="${es(p.email)}">
-    <td>${es(p.email)}</td>
-    <td><input class="in pgN" value="${es(p.nama)}" style="width:120px"></td>
-    <td><select class="in pgP">${['ADMIN','AKUNTANSI','PETUGAS','PENGAMAT'].map(x=>
+    <td>${es(p.email)}${p.pemilik?' <span style="color:var(--lb4);font-size:10.5px">(pemilik)</span>':''}</td>
+    <td><input class="in pgN" value="${es(p.nama)}" style="width:120px" ${p.pemilik?'disabled':''}></td>
+    <td><select class="in pgP" ${p.pemilik?'disabled':''}>${['ADMIN','AKUNTANSI','PETUGAS','PENGAMAT'].map(x=>
       `<option value="${x}" ${p.peran===x?'selected':''}>${x}</option>`).join('')}</select></td>
-    <td style="text-align:center"><input type="checkbox" class="pgA" ${p.aktif?'checked':''}></td>
-    <td><button class="b s pgSim">Simpan</button></td>
+    <td style="text-align:center"><input type="checkbox" class="pgA" ${p.aktif?'checked':''} ${p.pemilik?'disabled':''}></td>
+    <td style="white-space:nowrap">
+      <button class="b s pgSim" ${p.pemilik?'disabled':''}>Simpan</button>
+      ${p.pemilik?'':'<button class="b s pgHapus" style="color:var(--rd)">Hapus</button>'}
+    </td>
   </tr>`;
   modal('Kelola pengguna', `
-    <p style="font-size:11.5px;color:var(--lb3);margin-bottom:10px;line-height:1.55">Akun baru muncul di
-      sini setelah orang itu mendaftar sendiri lewat layar masuk — belum aktif sampai kamu aktifkan dan
-      pilih perannya di sini.</p>
+    <p style="font-size:11.5px;color:var(--lb3);margin-bottom:10px;line-height:1.55">Hanya pemilik akun
+      yang bisa membuat, mengubah akses, atau menghapus akun di sini. Pendaftaran mandiri sudah dimatikan
+      — semua akun baru dibuat langsung dari sini.</p>
+    <button class="b n" id="pgTambah" style="margin-bottom:10px">+ Tambah pengguna baru</button>
     <div style="max-height:50vh;overflow:auto"><table style="width:100%">
       <thead><tr><th>Email</th><th>Nama</th><th>Peran</th><th>Aktif</th><th></th></tr></thead>
       <tbody>${daftar.map(baris).join('')}</tbody>
     </table></div>`,
-    `<button class="b" onclick="closeAll()">Tutup</button>`, 620);
+    `<button class="b" onclick="closeAll()">Tutup</button>`, 640);
   document.querySelectorAll('.pgSim').forEach(btn=>{
     btn.onclick = async ()=>{
       const tr = btn.closest('tr');
@@ -3334,6 +3336,42 @@ async function kelolaPengguna(){
       }catch(e){ toast(e.message,'r'); btn.textContent='Simpan'; btn.disabled=false; }
     };
   });
+  document.querySelectorAll('.pgHapus').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const tr = btn.closest('tr');
+      const email = tr.dataset.email;
+      if(!confirm('Hapus akun '+email+'? Login akun ini akan langsung dimatikan dan tidak bisa dibatalkan.'))return;
+      btn.disabled = true; btn.textContent='...';
+      try{
+        await panggilKelolaAkun({ aksi:'hapus', email });
+        toast('Akun '+email+' dihapus','g');
+        kelolaPengguna();
+      }catch(e){ toast(e.message,'r'); btn.disabled=false; btn.textContent='Hapus'; }
+    };
+  });
+  const btnTambah = document.getElementById('pgTambah');
+  if(btnTambah) btnTambah.onclick = () => {
+    modal('Tambah pengguna baru', `
+      <div class="fl"><label>Email</label><input class="in" id="pgbEmail" type="email" placeholder="nama@contoh.com"></div>
+      <div class="fl"><label>Kata sandi awal</label><input class="in" id="pgbSandi" type="text" placeholder="minimal 6 karakter"></div>
+      <div class="fl"><label>Nama lengkap</label><input class="in" id="pgbNama" type="text"></div>
+      <div class="fl"><label>Peran</label><select class="in" id="pgbPeran">${['ADMIN','AKUNTANSI','PETUGAS','PENGAMAT'].map(x=>`<option value="${x}">${x}</option>`).join('')}</select></div>
+      <p style="font-size:11.5px;color:var(--lb3);margin-top:6px;line-height:1.5">Kasih tahu kata sandi ini ke orangnya langsung — sistem tidak mengirim email otomatis.</p>`,
+      `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="pgbSimpan">Buat akun</button>`);
+    document.getElementById('pgbSimpan').onclick = async (ev) => {
+      const email = document.getElementById('pgbEmail').value.trim();
+      const password = document.getElementById('pgbSandi').value;
+      const nama = document.getElementById('pgbNama').value.trim();
+      const peran = document.getElementById('pgbPeran').value;
+      if(!email || !password || !nama) return toast('Email, kata sandi, dan nama wajib diisi','r');
+      ev.target.disabled = true; ev.target.textContent = '...';
+      try{
+        await panggilKelolaAkun({ aksi:'buat', email, password, nama, peran });
+        toast('Akun '+nama+' dibuat','g');
+        kelolaPengguna();
+      }catch(e){ toast(e.message,'r'); ev.target.disabled=false; ev.target.textContent='Buat akun'; }
+    };
+  };
 }
 $('#uBox').onclick = kelolaPengguna;
 
