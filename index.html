@@ -3370,7 +3370,7 @@ async function kelolaPengguna(){
   const btnTambah = document.getElementById('pgTambah');
   if(btnTambah) btnTambah.onclick = () => {
     modal('Tambah pengguna baru', `
-      <div class="fl"><label>Username</label><input class="in" id="pgbUser" type="text" autocapitalize="off" placeholder="mis. budi.petugas"></div>
+      <div class="fl"><label>Username</label><input class="in" id="pgbUser" type="text" autocapitalize="off" minlength="6" maxlength="18" placeholder="6-18 karakter, mis. budi.petugas"></div>
       <div class="fl"><label>Kata sandi awal</label><input class="in" id="pgbSandi" type="text" placeholder="minimal 6 karakter"></div>
       <div class="fl"><label>Nama lengkap</label><input class="in" id="pgbNama" type="text"></div>
       <div class="fl"><label>Peran</label><select class="in" id="pgbPeran">${['ADMIN','AKUNTANSI','PETUGAS','PENGAMAT'].map(x=>`<option value="${x}">${PERAN[x].n}</option>`).join('')}</select>
@@ -3386,6 +3386,7 @@ async function kelolaPengguna(){
       const nama = document.getElementById('pgbNama').value.trim();
       const peran = document.getElementById('pgbPeran').value;
       if(!username || !password || !nama) return toast('Username, kata sandi, dan nama wajib diisi','r');
+      if(username.length < 6 || username.length > 18) return toast('Username harus 6-18 karakter','r');
       ev.target.disabled = true; ev.target.textContent = '...';
       try{
         await panggilKelolaAkun({ aksi:'buat', username, password, nama, peran });
