@@ -881,6 +881,7 @@ const ND=[['l','Operasional'],['dash','grid','Dashboard',null],['reg','list','Re
  ['l','Laporan'],['lap','layers','Laporan',null],
  ['l','Sistem'],['master','gear','Pengaturan',null],['audit','clock','Log audit',null],['about','info','Tentang',null]];
 let page='dash';
+let RENDER_PAGE_TERAKHIR=null;
 function renderNav(){
  $('#nav').innerHTML=ND.map(n=>{
   if(n[0]==='l')return tr(`<div class="sdl">${n[1]}</div>`);
@@ -919,7 +920,8 @@ function render(){
   log('UBAH','KONFIG','peran','Peran diubah ke '+PERAN[USER.peran].n);toast('Peran: '+PERAN[USER.peran].n,'g');closeAll();render()});
  const c=$('#ct');c.innerHTML=tr(({dash:vDash,reg:vReg,pinjam:vPinjam,rawat:vRawat,opname:vOpname,rekon:vRekon,master:vMaster,audit:vAudit,about:vAbout,lepas:vLepas,lap:vLap})[page]());
  c.classList.remove('fade');void c.offsetWidth;c.classList.add('fade');
- bind();$('.scr').scrollTop=0;
+ bind();
+ if(page!==RENDER_PAGE_TERAKHIR){$('.scr').scrollTop=0;RENDER_PAGE_TERAKHIR=page}
 }
 
 /* ═══════ VIEWS ═══════ */
