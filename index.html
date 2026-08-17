@@ -3311,10 +3311,13 @@ async function kelolaPengguna(){
       ${p.pemilik?'':'<button class="b s pgHapus" style="color:var(--rd)">Hapus</button>'}
     </td>
   </tr>`;
+  const legendPeran = Object.entries(PERAN).map(([k,v])=>
+    `<div class="kr"><dt>${es(v.n)}</dt><dd style="font-size:11.5px;color:var(--lb3)">${es(v.d)}</dd></div>`).join('');
   modal('Kelola pengguna', `
     <p style="font-size:11.5px;color:var(--lb3);margin-bottom:10px;line-height:1.55">Hanya pemilik akun
       yang bisa membuat, mengubah akses, atau menghapus akun di sini. Pendaftaran mandiri sudah dimatikan
       — semua akun baru dibuat langsung dari sini.</p>
+    <div class="ins" style="margin-bottom:12px">${legendPeran}</div>
     <button class="b n" id="pgTambah" style="margin-bottom:10px">+ Tambah pengguna baru</button>
     <div style="max-height:50vh;overflow:auto"><table style="width:100%">
       <thead><tr><th>Email</th><th>Nama</th><th>Peran</th><th>Aktif</th><th></th></tr></thead>
@@ -3355,9 +3358,13 @@ async function kelolaPengguna(){
       <div class="fl"><label>Email</label><input class="in" id="pgbEmail" type="email" placeholder="nama@contoh.com"></div>
       <div class="fl"><label>Kata sandi awal</label><input class="in" id="pgbSandi" type="text" placeholder="minimal 6 karakter"></div>
       <div class="fl"><label>Nama lengkap</label><input class="in" id="pgbNama" type="text"></div>
-      <div class="fl"><label>Peran</label><select class="in" id="pgbPeran">${['ADMIN','AKUNTANSI','PETUGAS','PENGAMAT'].map(x=>`<option value="${x}">${x}</option>`).join('')}</select></div>
+      <div class="fl"><label>Peran</label><select class="in" id="pgbPeran">${['ADMIN','AKUNTANSI','PETUGAS','PENGAMAT'].map(x=>`<option value="${x}">${PERAN[x].n}</option>`).join('')}</select>
+        <p id="pgbPeranD" style="font-size:11px;color:var(--lb3);margin:5px 0 0;line-height:1.45">${es(PERAN.ADMIN.d)}</p></div>
       <p style="font-size:11.5px;color:var(--lb3);margin-top:6px;line-height:1.5">Kasih tahu kata sandi ini ke orangnya langsung — sistem tidak mengirim email otomatis.</p>`,
       `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="pgbSimpan">Buat akun</button>`);
+    document.getElementById('pgbPeran').onchange = e => {
+      document.getElementById('pgbPeranD').textContent = PERAN[e.target.value].d;
+    };
     document.getElementById('pgbSimpan').onclick = async (ev) => {
       const email = document.getElementById('pgbEmail').value.trim();
       const password = document.getElementById('pgbSandi').value;
