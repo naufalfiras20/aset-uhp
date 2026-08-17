@@ -2633,10 +2633,10 @@ function tampilkanLogin(pesan) {
       align-items:center;justify-content:center;margin-bottom:16px">
       <span style="color:#F97D05;font-weight:700;font-size:11px">UHP</span></div>
     <h2 style="font-size:17px;margin:0 0 4px;color:#1a1a1a">Aset UHP</h2>
-    <p style="color:#8a8a94;font-size:12.5px;margin:0 0 18px">Masuk dengan email dan kata sandi.</p>
+    <p style="color:#8a8a94;font-size:12.5px;margin:0 0 18px">Masuk dengan username dan kata sandi.</p>
     <div id="gerbangPesan" style="font-size:12.5px;color:#C0392B;margin-bottom:${pesan ? '10px' : '0'};
       ${pesan ? '' : 'display:none'}">${pesan || ''}</div>
-    <input id="gEmail" type="email" placeholder="Email" autocomplete="username"
+    <input id="gUser" type="text" placeholder="Username" autocomplete="username" autocapitalize="off"
       style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #e3e3e8;border-radius:8px;
       font-size:13.5px;margin-bottom:8px">
     <input id="gSandi" type="password" placeholder="Kata sandi" autocomplete="current-password"
@@ -2650,21 +2650,21 @@ function tampilkanLogin(pesan) {
   document.body.appendChild(el);
 
   const jalan = async (fn) => {
-    const email = document.getElementById('gEmail').value.trim();
+    const username = document.getElementById('gUser').value.trim().toLowerCase();
     const sandi = document.getElementById('gSandi').value;
     const pesanEl = document.getElementById('gerbangPesan');
     pesanEl.style.display = 'none';
-    if (!email || !sandi) { pesanEl.textContent = 'Isi email dan kata sandi.'; pesanEl.style.display = ''; return; }
+    if (!username || !sandi) { pesanEl.textContent = 'Isi username dan kata sandi.'; pesanEl.style.display = ''; return; }
     try {
-      await fn(email, sandi);
+      await fn(username, sandi);
     } catch (e) {
       pesanEl.textContent = e.message || String(e);
       pesanEl.style.display = '';
     }
   };
-  document.getElementById('gMasuk').onclick = () => jalan(async (email, sandi) => {
-    const { error } = await supa.auth.signInWithPassword({ email, password: sandi });
-    if (error) throw error;
+  document.getElementById('gMasuk').onclick = () => jalan(async (username, sandi) => {
+    const { error } = await supa.auth.signInWithPassword({ email: username + '@uhp.internal', password: sandi });
+    if (error) throw new Error(/invalid/i.test(error.message) ? 'Username atau kata sandi salah.' : error.message);
     el.style.display = 'none';
     mulaiSetelahLogin();
   });
@@ -2722,7 +2722,7 @@ async function supaMuat() {
   ]);
 
   if (!pRow) throw new Error('Akun ini belum terdaftar. Minta admin menambahkan lewat menu Pengguna.');
-  if (!pRow.aktif) throw new Error('Akun ' + pRow.email + ' dinonaktifkan atau belum diaktifkan admin.');
+  if (!pRow.aktif) throw new Error('Akun ' + pRow.username + ' dinonaktifkan atau belum diaktifkan admin.');
 
   const izinRes = await supa.from('peran_izin').select('izin').eq('peran', pRow.peran);
   const izin = cekGalat(izinRes).map(x => x.izin);
@@ -2741,8 +2741,8 @@ async function supaMuat() {
   if (berjalan) berjalan.detail = detailRows.filter(d => d.sesi === berjalan.id);
 
   return {
-    pengguna: { nama: pRow.nama, inisial: (pRow.nama || pRow.email).charAt(0).toUpperCase(),
-      peran: pRow.peran, email: pRow.email, pemilik: !!pRow.pemilik },
+    pengguna: { nama: pRow.nama, inisial: (pRow.nama || pRow.username).charAt(0).toUpperCase(),
+      peran: pRow.peran, username: pRow.username, pemilik: !!pRow.pemilik },
     izin,
     aset: petakan(cekGalat(aset), PETA_ASET).map(x => Object.assign(x, { lepas: lepasMap[x.kode] || null })),
     dept: grup('dept'), kat: grup('kat'), lok: grup('lok'), org: grup('org'), proy: grup('proy'),
@@ -2855,7 +2855,7 @@ function srv(nama, ...args) {
 
       case 'apiSimpanPengguna':
         return cekGalat(await supa.rpc('rpc_ubah_peran_pengguna',
-          { p_email: args[0], p_nama: args[1], p_peran: args[2], p_aktif: args[3] }));
+          { p_username: args[0], p_nama: args[1], p_peran: args[2], p_aktif: args[3] }));
 
       default:
         throw new Error('Aksi "' + nama + '" belum dipetakan ke Supabase.');
@@ -2931,7 +2931,7 @@ async function muatUlang(){
 }
 
 function pasangData(d){
-  USER={nama:d.pengguna.nama,inisial:d.pengguna.inisial,peran:d.pengguna.peran,email:d.pengguna.email,pemilik:!!d.pengguna.pemilik};
+  USER={nama:d.pengguna.nama,inisial:d.pengguna.inisial,peran:d.pengguna.peran,username:d.pengguna.username,pemilik:!!d.pengguna.pemilik};
   IZIN_SERVER=d.izin||[];
 
   DB.aset=d.aset.map(a=>{
@@ -3300,40 +3300,40 @@ async function kelolaPengguna(){
   let daftar;
   try{ daftar = await srv('apiDaftarPengguna'); }
   catch(e){ return toast(e.message,'r'); }
-  const baris = p => `<tr data-email="${es(p.email)}">
-    <td>${es(p.email)}${p.pemilik?' <span style="color:var(--lb4);font-size:10.5px">(pemilik)</span>':''}</td>
+  const baris = p => `<tr data-username="${es(p.username)}">
+    <td>${es(p.username)}${p.pemilik?' <span style="color:var(--lb4);font-size:10.5px">(pemilik)</span>':''}</td>
     <td><input class="in pgN" value="${es(p.nama)}" style="width:120px" ${p.pemilik?'disabled':''}></td>
     <td><select class="in pgP" ${p.pemilik?'disabled':''}>${['ADMIN','AKUNTANSI','PETUGAS','PENGAMAT'].map(x=>
       `<option value="${x}" ${p.peran===x?'selected':''}>${x}</option>`).join('')}</select></td>
     <td style="text-align:center"><input type="checkbox" class="pgA" ${p.aktif?'checked':''} ${p.pemilik?'disabled':''}></td>
     <td style="white-space:nowrap">
       <button class="b s pgSim" ${p.pemilik?'disabled':''}>Simpan</button>
-      ${p.pemilik?'':'<button class="b s pgHapus" style="color:var(--rd)">Hapus</button>'}
+      ${p.pemilik?'':'<button class="b s pgSandi">Reset sandi</button><button class="b s pgHapus" style="color:var(--rd)">Hapus</button>'}
     </td>
   </tr>`;
   const legendPeran = Object.entries(PERAN).map(([k,v])=>
     `<div class="kr"><dt>${es(v.n)}</dt><dd style="font-size:11.5px;color:var(--lb3)">${es(v.d)}</dd></div>`).join('');
   modal('Kelola pengguna', `
     <p style="font-size:11.5px;color:var(--lb3);margin-bottom:10px;line-height:1.55">Hanya pemilik akun
-      yang bisa membuat, mengubah akses, atau menghapus akun di sini. Pendaftaran mandiri sudah dimatikan
-      — semua akun baru dibuat langsung dari sini.</p>
+      yang bisa membuat, mengubah akses, mengatur ulang sandi, atau menghapus akun di sini. Pendaftaran
+      mandiri sudah dimatikan — semua akun baru dibuat langsung dari sini, pakai username, bukan email.</p>
     <div class="ins" style="margin-bottom:12px">${legendPeran}</div>
     <button class="b n" id="pgTambah" style="margin-bottom:10px">+ Tambah pengguna baru</button>
     <div style="max-height:50vh;overflow:auto"><table style="width:100%">
-      <thead><tr><th>Email</th><th>Nama</th><th>Peran</th><th>Aktif</th><th></th></tr></thead>
+      <thead><tr><th>Username</th><th>Nama</th><th>Peran</th><th>Aktif</th><th></th></tr></thead>
       <tbody>${daftar.map(baris).join('')}</tbody>
     </table></div>`,
     `<button class="b" onclick="closeAll()">Tutup</button>`, 640);
   document.querySelectorAll('.pgSim').forEach(btn=>{
     btn.onclick = async ()=>{
       const tr = btn.closest('tr');
-      const email = tr.dataset.email;
+      const username = tr.dataset.username;
       const nama = tr.querySelector('.pgN').value.trim();
       const peran = tr.querySelector('.pgP').value;
       const aktif = tr.querySelector('.pgA').checked;
       btn.disabled = true; btn.textContent='...';
       try{
-        await srv('apiSimpanPengguna', email, nama, peran, aktif);
+        await srv('apiSimpanPengguna', username, nama, peran, aktif);
         toast(nama+' disimpan','g');
         btn.textContent='Simpan'; btn.disabled=false;
       }catch(e){ toast(e.message,'r'); btn.textContent='Simpan'; btn.disabled=false; }
@@ -3342,38 +3342,53 @@ async function kelolaPengguna(){
   document.querySelectorAll('.pgHapus').forEach(btn=>{
     btn.onclick = async ()=>{
       const tr = btn.closest('tr');
-      const email = tr.dataset.email;
-      if(!confirm('Hapus akun '+email+'? Login akun ini akan langsung dimatikan dan tidak bisa dibatalkan.'))return;
+      const username = tr.dataset.username;
+      if(!confirm('Hapus akun '+username+'? Login akun ini akan langsung dimatikan dan tidak bisa dibatalkan.'))return;
       btn.disabled = true; btn.textContent='...';
       try{
-        await panggilKelolaAkun({ aksi:'hapus', email });
-        toast('Akun '+email+' dihapus','g');
+        await panggilKelolaAkun({ aksi:'hapus', username });
+        toast('Akun '+username+' dihapus','g');
         kelolaPengguna();
       }catch(e){ toast(e.message,'r'); btn.disabled=false; btn.textContent='Hapus'; }
+    };
+  });
+  document.querySelectorAll('.pgSandi').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const tr = btn.closest('tr');
+      const username = tr.dataset.username;
+      const sandiBaru = prompt('Sandi baru untuk '+username+' (minimal 6 karakter):');
+      if(sandiBaru === null) return;
+      if(sandiBaru.length < 6) return toast('Kata sandi minimal 6 karakter','r');
+      btn.disabled = true; btn.textContent='...';
+      try{
+        await panggilKelolaAkun({ aksi:'reset_sandi', username, password: sandiBaru });
+        toast('Sandi '+username+' diperbarui — catat/kasih tahu langsung, tidak ditampilkan lagi','g');
+      }catch(e){ toast(e.message,'r'); }
+      btn.disabled=false; btn.textContent='Reset sandi';
     };
   });
   const btnTambah = document.getElementById('pgTambah');
   if(btnTambah) btnTambah.onclick = () => {
     modal('Tambah pengguna baru', `
-      <div class="fl"><label>Email</label><input class="in" id="pgbEmail" type="email" placeholder="nama@contoh.com"></div>
+      <div class="fl"><label>Username</label><input class="in" id="pgbUser" type="text" autocapitalize="off" placeholder="mis. budi.petugas"></div>
       <div class="fl"><label>Kata sandi awal</label><input class="in" id="pgbSandi" type="text" placeholder="minimal 6 karakter"></div>
       <div class="fl"><label>Nama lengkap</label><input class="in" id="pgbNama" type="text"></div>
       <div class="fl"><label>Peran</label><select class="in" id="pgbPeran">${['ADMIN','AKUNTANSI','PETUGAS','PENGAMAT'].map(x=>`<option value="${x}">${PERAN[x].n}</option>`).join('')}</select>
         <p id="pgbPeranD" style="font-size:11px;color:var(--lb3);margin:5px 0 0;line-height:1.45">${es(PERAN.ADMIN.d)}</p></div>
-      <p style="font-size:11.5px;color:var(--lb3);margin-top:6px;line-height:1.5">Kasih tahu kata sandi ini ke orangnya langsung — sistem tidak mengirim email otomatis.</p>`,
+      <p style="font-size:11.5px;color:var(--lb3);margin-top:6px;line-height:1.5">Kasih tahu username dan kata sandi ini ke orangnya langsung — sistem tidak mengirim apa pun otomatis, dan tidak butuh email sungguhan.</p>`,
       `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="pgbSimpan">Buat akun</button>`);
     document.getElementById('pgbPeran').onchange = e => {
       document.getElementById('pgbPeranD').textContent = PERAN[e.target.value].d;
     };
     document.getElementById('pgbSimpan').onclick = async (ev) => {
-      const email = document.getElementById('pgbEmail').value.trim();
+      const username = document.getElementById('pgbUser').value.trim().toLowerCase();
       const password = document.getElementById('pgbSandi').value;
       const nama = document.getElementById('pgbNama').value.trim();
       const peran = document.getElementById('pgbPeran').value;
-      if(!email || !password || !nama) return toast('Email, kata sandi, dan nama wajib diisi','r');
+      if(!username || !password || !nama) return toast('Username, kata sandi, dan nama wajib diisi','r');
       ev.target.disabled = true; ev.target.textContent = '...';
       try{
-        await panggilKelolaAkun({ aksi:'buat', email, password, nama, peran });
+        await panggilKelolaAkun({ aksi:'buat', username, password, nama, peran });
         toast('Akun '+nama+' dibuat','g');
         kelolaPengguna();
       }catch(e){ toast(e.message,'r'); ev.target.disabled=false; ev.target.textContent='Buat akun'; }
