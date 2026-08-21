@@ -983,7 +983,7 @@ function vDash(){
  </div>`;
 }
 
-let F={q:'',dept:'',kat:'',stat:'',link:'',kond:'',cara:'',lok:'',tglA:'',tglB:'',cetak:'',sort:'kode',dir:1};
+let F={q:'',dept:'',kat:'',stat:'',link:'',kond:'',cara:'',lok:'',tglA:'',tglB:'',cetak:'',tempel:'',sort:'kode',dir:1};
 function vReg(){
  let r=DB.aset.filter(x=>{
   if(F.dept&&x.dept!==F.dept)return 0;
@@ -1006,6 +1006,8 @@ function vReg(){
   if(F.link==='no'&&x.link)return 0;
   if(F.cetak==='sudah'&&!x.dicetak)return 0;
   if(F.cetak==='belum'&&x.dicetak)return 0;
+  if(F.tempel==='sudah'&&!x.ditempel)return 0;
+  if(F.tempel==='belum'&&x.ditempel)return 0;
   if(F.q&&!(x.kode+x.nama+x.sn+ln(x.lok)+x.pic+dn(x.dept)+(x.catatan||'')).toLowerCase().includes(F.q.toLowerCase()))return 0;
   return 1});
  r.sort((p,q)=>{const a=p[F.sort],b=q[F.sort];return(typeof a==='string'?a.localeCompare(b):a-b)*F.dir});
@@ -1019,6 +1021,7 @@ function vReg(){
   <select id="flk" style="width:auto"><option value="">Semua lokasi</option>${DB.lok.map(d=>`<option value="${d.k}" ${F.lok===d.k?'selected':''}>${es(d.n)}</option>`).join('')}</select>
   <select id="fl" style="width:auto"><option value="">QR: semua</option><option value="ada" ${F.link==='ada'?'selected':''}>Sudah ada QR</option><option value="no" ${F.link==='no'?'selected':''}>Belum ada QR</option></select>
   <select id="fpc" style="width:auto"><option value="">Cetak: semua</option><option value="sudah" ${F.cetak==='sudah'?'selected':''}>Sudah dicetak</option><option value="belum" ${F.cetak==='belum'?'selected':''}>Belum dicetak</option></select>
+  <select id="fpt" style="width:auto"><option value="">Ditempel: semua</option><option value="sudah" ${F.tempel==='sudah'?'selected':''}>Sudah ditempel</option><option value="belum" ${F.tempel==='belum'?'selected':''}>Belum ditempel</option></select>
   <div style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--lb3)">
    <span>Perolehan</span>
    <input type="date" id="fta" value="${es(F.tglA)}" style="width:auto;padding:3px 6px" title="Perolehan dari tanggal">
@@ -1026,7 +1029,7 @@ function vReg(){
    <input type="date" id="ftb" value="${es(F.tglB)}" style="width:auto;padding:3px 6px" title="Perolehan sampai tanggal">
   </div>
   <div class="seg">${['','TERSEDIA','DIPINJAM','PERBAIKAN','HILANG','DILEPAS'].map(s=>`<div class="${F.stat===s?'on':''}" data-st="${s}">${s?ST[s][1]:'Semua'}</div>`).join('')}</div>
-  ${(F.dept||F.kat||F.kond||F.cara||F.lok||F.link||F.cetak||F.stat||F.tglA||F.tglB||F.q)?`<button class="b s" id="fclr" title="Bersihkan semua filter">${ic('x')}Bersihkan filter</button>`:''}
+  ${(F.dept||F.kat||F.kond||F.cara||F.lok||F.link||F.cetak||F.tempel||F.stat||F.tglA||F.tglB||F.q)?`<button class="b s" id="fclr" title="Bersihkan semua filter">${ic('x')}Bersihkan filter</button>`:''}
   <div style="flex:1"></div>
   ${can('impor')?`<button class="b s" id="imp">${ic('up')}Impor CSV</button>`:''}
   <button class="b s" id="exp">${ic('dl')}Ekspor CSV</button>
@@ -1035,11 +1038,11 @@ function vReg(){
   <span style="color:#fff;font-size:12.5px;font-weight:500">${SEL.size} dipilih</span>
   <div style="flex:1"></div>
   <button class="b s" id="mLabel">${ic('print')}Cetak label</button>
-  ${can('editOps')?`<button class="b s" id="mCetak">${ic('check')}Tandai sudah dicetak</button><button class="b s" id="mLok2">${ic('pin')}Pindah lokasi</button><button class="b s" id="mPola">${ic('tag')}Isi link dari pola</button>`:''}
+  ${can('editOps')?`<button class="b s" id="mCetak">${ic('check')}Tandai sudah dicetak</button><button class="b s" id="mTempel">${ic('check')}Tandai sudah ditempel</button><button class="b s" id="mLok2">${ic('pin')}Pindah lokasi</button><button class="b s" id="mPola">${ic('tag')}Isi link dari pola</button>`:''}
   <button class="b s" id="mClr">Batal pilih</button>
  </div></div>`:''}
  <div class="cd" style="margin:0">
- <table><thead><tr><th style="width:30px"><input type="checkbox" id="selAll" ${r.length&&r.every(x=>SEL.has(x.kode))?'checked':''} style="cursor:pointer"></th>${th('kode','Kode')}${th('nama','Aset')}${th('dept','Dept')}${th('tgl','Perolehan')}<th style="width:170px">Catatan</th><th>Lokasi</th><th>Pemegang</th>${th('kond','Kondisi')}<th style="width:52px">QR</th><th style="width:60px">Cetak</th>${th('stat','Status')}${can('lihatFin')?th('nb','Nilai buku','nu'):''}</tr></thead>
+ <table><thead><tr><th style="width:30px"><input type="checkbox" id="selAll" ${r.length&&r.every(x=>SEL.has(x.kode))?'checked':''} style="cursor:pointer"></th>${th('kode','Kode')}${th('nama','Aset')}${th('dept','Dept')}${th('tgl','Perolehan')}<th style="width:170px">Catatan</th><th>Lokasi</th><th>Pemegang</th>${th('kond','Kondisi')}<th style="width:52px">QR</th><th style="width:60px">Cetak</th><th style="width:64px">Ditempel</th>${th('stat','Status')}${can('lihatFin')?th('nb','Nilai buku','nu'):''}</tr></thead>
  <tbody>${r.length?r.map(x=>{const l=loanOf(x.kode),tl=l&&late(l)>0;
   return`<tr class="ck ${SEL.has(x.kode)?'selrow':''}" data-k="${x.kode}">
   <td onclick="event.stopPropagation();togSel('${x.kode}')" style="cursor:pointer"><input type="checkbox" ${SEL.has(x.kode)?'checked':''} style="pointer-events:none"></td>
@@ -1053,9 +1056,10 @@ function vReg(){
   <td>${kox(x.kond)}</td>
   <td>${x.link?`<span title="${es(x.link)}" style="color:var(--gr);font-size:13px">●</span>`:can('editOps')||can('master')?`<button class="b s" data-lk="${x.kode}" style="padding:1px 6px;font-size:10.5px">Isi</button>`:'<span style="color:var(--lb4)">—</span>'}</td>
   <td>${x.dicetak?`<span title="Sudah dicetak — ${dt(x.dicetakTgl)}${x.dicetakOleh?' · '+es(x.dicetakOleh):''}. Klik untuk batalkan." style="color:var(--gr);font-size:13px;cursor:pointer" data-tc="${x.kode}">●</span>`:can('editOps')||can('master')?`<button class="b s" data-tc="${x.kode}" style="padding:1px 6px;font-size:10.5px" title="Tandai sudah dicetak">Tandai</button>`:'<span style="color:var(--lb4)">—</span>'}</td>
+  <td>${x.ditempel?`<span title="Sudah ditempel — ${dt(x.ditempelTgl)}${x.ditempelOleh?' · '+es(x.ditempelOleh):''}. Klik untuk batalkan." style="color:var(--gr);font-size:13px;cursor:pointer" data-tt="${x.kode}">●</span>`:!x.dicetak?'<span style="color:var(--lb4)" title="Cetak labelnya dulu sebelum bisa ditandai ditempel">—</span>':can('editOps')||can('master')?`<button class="b s" data-tt="${x.kode}" style="padding:1px 6px;font-size:10.5px" title="Tandai sudah ditempel">Tandai</button>`:'<span style="color:var(--lb4)">—</span>'}</td>
   <td>${tl?pl('r','Telat '+late(l)+' hari'):stx(x.stat)}</td>
   ${can('lihatFin')?`<td class="nu">${x.nb?Math.round(x.nb).toLocaleString('id-ID'):'<span style="color:var(--lb4)">0</span>'}</td>`:''}</tr>`}).join(''):
-  `<tr><td colspan="${can('lihatFin')?13:12}"><div class="emp">${ic('search')}<b>Tidak ada yang cocok</b><span>Coba ubah filter atau kata kuncinya.</span></div></td></tr>`}
+  `<tr><td colspan="${can('lihatFin')?14:13}"><div class="emp">${ic('search')}<b>Tidak ada yang cocok</b><span>Coba ubah filter atau kata kuncinya.</span></div></td></tr>`}
  </tbody></table></div>
  <p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Menampilkan ${r.length} dari ${DB.aset.length} aset · ${punyaLink()} sudah punya QR · ${sudahCetak()} sudah dicetak.${(F.tglA||F.tglB)?` Perolehan ${F.tglA?dt(pd(F.tglA)):'paling awal'} sampai ${F.tglB?dt(pd(F.tglB)):'terakhir'}.`:''}${F.lok?` Lokasi ${es(ln(F.lok))}.`:''}</p>`;
 }
@@ -1405,9 +1409,12 @@ function openAsset(k){
   <div class="sec"><div class="sct">Status cetak</div><div class="ins">
    <div class="kr"><dt>Label</dt><dd>${x.dicetak?pl('g','Sudah dicetak'):pl('m','Belum dicetak')}</dd></div>
    ${x.dicetak?`<div class="kr"><dt>Ditandai</dt><dd>${dt(x.dicetakTgl)}${x.dicetakOleh?' · '+es(x.dicetakOleh):''}</dd></div>`:''}
+   <div class="kr"><dt>Ditempel di aset</dt><dd>${x.ditempel?pl('g','Sudah ditempel'):pl('m','Belum ditempel')}</dd></div>
+   ${x.ditempel?`<div class="kr"><dt>Ditandai</dt><dd>${dt(x.ditempelTgl)}${x.ditempelOleh?' · '+es(x.ditempelOleh):''}</dd></div>`:''}
   </div>
-  <div style="display:flex;gap:6px;margin-top:8px">
+  <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
    <button class="b s" onclick="togCetak('${k}')">${ic(x.dicetak?'x':'check')}${x.dicetak?'Tandai belum dicetak':'Tandai sudah dicetak'}</button>
+   <button class="b s" onclick="togTempel('${k}')" ${x.ditempel||x.dicetak?'':'disabled title="Cetak dulu sebelum bisa ditandai ditempel"'}>${ic(x.ditempel?'x':'check')}${x.ditempel?'Tandai belum ditempel':'Tandai sudah ditempel'}</button>
   </div></div>
   <div class="sec"><div class="sct">Status</div><div class="ins">
    <div class="kr"><dt>Sekarang</dt><dd>${l&&late(l)>0?pl('r','Telat '+late(l)+' hari'):stx(x.stat)}</dd></div>
@@ -1935,8 +1942,8 @@ function bukaP15(kodeList){
  toast(`Membuka pencetak P15 — ${ks.length} label${tanpa?`, ${tanpa} dilewati`:''}`,'g');
 }
 function expCsv(){
- const rows=[['kode','nama','kategori','departemen','lokasi','pemegang','status','kondisi','nilai_buku','sudah_dicetak']];
- DB.aset.forEach(x=>rows.push([x.kode,x.nama,kn(x.kat),dn(x.dept),ln(x.lok),x.pic,x.stat,x.kond,x.nb,x.dicetak?'YA':'TIDAK']));
+ const rows=[['kode','nama','kategori','departemen','lokasi','pemegang','status','kondisi','nilai_buku','sudah_dicetak','sudah_ditempel']];
+ DB.aset.forEach(x=>rows.push([x.kode,x.nama,kn(x.kat),dn(x.dept),ln(x.lok),x.pic,x.stat,x.kond,x.nb,x.dicetak?'YA':'TIDAK',x.ditempel?'YA':'TIDAK']));
  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
  const b=new Blob([csv],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(b),a=document.createElement('a');
  a.href=u;a.download='registri-aset-uhp.csv';a.click();URL.revokeObjectURL(u);
@@ -2491,18 +2498,20 @@ function bind(){
  {const e=$('#fta');if(e)e.onchange=()=>{F.tglA=e.value;render()}}
  {const e=$('#ftb');if(e)e.onchange=()=>{F.tglB=e.value;render()}}
  {const e=$('#fpc');if(e)e.onchange=()=>{F.cetak=e.value;render()}}
+ {const e=$('#fpt');if(e)e.onchange=()=>{F.tempel=e.value;render()}}
  {const e=$('#fclr');if(e)e.onclick=()=>{
-   F.dept='';F.kat='';F.kond='';F.cara='';F.lok='';F.link='';F.cetak='';F.stat='';F.tglA='';F.tglB='';F.q='';
+   F.dept='';F.kat='';F.kond='';F.cara='';F.lok='';F.link='';F.cetak='';F.tempel='';F.stat='';F.tglA='';F.tglB='';F.q='';
    const g=$('#gs');if(g)g.value='';
    toast('Filter dibersihkan','g');render()}}
  $$('[data-lk]').forEach(e=>e.onclick=v=>{v.stopPropagation();editLink(e.dataset.lk)});
  $$('[data-tc]').forEach(e=>e.onclick=v=>{v.stopPropagation();togCetak(e.dataset.tc)});
+ $$('[data-tt]').forEach(e=>e.onclick=v=>{v.stopPropagation();togTempel(e.dataset.tt)});
  $$('[data-hp]').forEach(e=>e.onclick=v=>{v.stopPropagation();hapusAsetDlg(e.dataset.hp)});
  $$('[data-arsip]').forEach(e=>e.onclick=v=>{v.stopPropagation();arsipHapus(e.dataset.arsip)});
  {const g=$('#hpGo');if(g)g.onclick=()=>doHapusAset(g.dataset.k)}
  $$('[data-dr]').forEach(e=>e.onclick=()=>drill(e.dataset.dr));
  const sa=$('#selAll');if(sa)sa.onclick=()=>{const ks=[...$$('tbody tr[data-k]')].map(e=>e.dataset.k);selAll(ks)};
- b2('#mLabel',labelMassal);b2('#mCetak',massalCetak);b2('#mLok2',massalLokasi);b2('#mPola',massalPola);
+ b2('#mLabel',labelMassal);b2('#mCetak',massalCetak);b2('#mTempel',massalTempel);b2('#mLok2',massalLokasi);b2('#mPola',massalPola);
  b2('#mClr',()=>{SEL.clear();render()});b2('#imp',importCSV);
  const dlp=$('#doLepas');if(dlp)dlp.onclick=()=>doLepas(dlp.dataset.k);
  $$('[data-bar]').forEach(e=>e.onclick=()=>{Object.assign(F,{q:'',dept:'',kat:e.dataset.bar,stat:'',link:'',sort:'kode',dir:1});go('reg')});
@@ -2604,7 +2613,7 @@ $('#thm').onclick=()=>{const h=document.documentElement;h.dataset.theme=h.datase
 $$('#lng span').forEach(e=>e.onclick=()=>setLang(e.dataset.l));
 $('#uBox').onclick=gantiPeran;
 /* ekspor pengujian */
-window.__uhp={get DB(){return DB},A,go,F,get CART(){return CART},runRekon,fixFinding,doPinjam,doRet,doEdit,doAdd,startOpname,scanOpname,doCloseOpname,cmdSearch,get cmdR(){return cR},render,doMAdd,doMEdit,doMDel,usedBy,qrSpec,qrText,polaFor,applyPola,clearLinks,setLink,punyaLink,mAdd,mEdit,mDel,scanView,editLink,durasi,fotoDari,hitung,retLoan,maxVer,pw,dotMm,drill,drillAge,DRILL,sisa,addAsset,printLabel,openAsset,can,gantiPeran,editFin,doFin,jadwalSusut,setLang,tr,editAsset,addCart,get LANG(){return LANG},get USER(){return USER},PERAN,APP,lepasAset,doLepas,batalLepas,importCSV,parseCSV,labelMassal,massalLokasi,massalPola,editExtra,anggotaKit,togSel,selAll,get SEL(){return SEL},sehat,KD,JLEPAS,garansiSisa,drillKond,KONDALIAS,LAPORAN,get LAP(){return LAP},lapData,asalData,lapCsv,vLap,mutasi,JMUT,SUMBER,bulanAntara,JPEROLEH,doExtra,editExtra,doFin,importCSV,labeliTabel,bukaMenu,tutupMenu,bind,hapusAsetDlg,doHapusAset,arsipHapus,AX,terhapus,namaAset,loanOf,closeAll,lapData,togCetak,massalCetak,tandaiKode,sudahCetak,bukaP15,payloadP15,b64url,P15_BRIDGE};
+window.__uhp={get DB(){return DB},A,go,F,get CART(){return CART},runRekon,fixFinding,doPinjam,doRet,doEdit,doAdd,startOpname,scanOpname,doCloseOpname,cmdSearch,get cmdR(){return cR},render,doMAdd,doMEdit,doMDel,usedBy,qrSpec,qrText,polaFor,applyPola,clearLinks,setLink,punyaLink,mAdd,mEdit,mDel,scanView,editLink,durasi,fotoDari,hitung,retLoan,maxVer,pw,dotMm,drill,drillAge,DRILL,sisa,addAsset,printLabel,openAsset,can,gantiPeran,editFin,doFin,jadwalSusut,setLang,tr,editAsset,addCart,get LANG(){return LANG},get USER(){return USER},PERAN,APP,lepasAset,doLepas,batalLepas,importCSV,parseCSV,labelMassal,massalLokasi,massalPola,editExtra,anggotaKit,togSel,selAll,get SEL(){return SEL},sehat,KD,JLEPAS,garansiSisa,drillKond,KONDALIAS,LAPORAN,get LAP(){return LAP},lapData,asalData,lapCsv,vLap,mutasi,JMUT,SUMBER,bulanAntara,JPEROLEH,doExtra,editExtra,doFin,importCSV,labeliTabel,bukaMenu,tutupMenu,bind,hapusAsetDlg,doHapusAset,arsipHapus,AX,terhapus,namaAset,loanOf,closeAll,lapData,togCetak,massalCetak,tandaiKode,sudahCetak,togTempel,massalTempel,bukaP15,payloadP15,b64url,P15_BRIDGE};
 
 
 /* ════════════════════════════════════════════════════════════
@@ -2679,7 +2688,8 @@ function tampilkanLogin(pesan) {
    nama field persis camelCase seperti di Apps Script dulu, jadi
    dipetakan balik di sini — satu tempat, dipakai semua jalur baca. */
 const PETA_ASET = { overrideoleh:'overrideOleh', overridetgl:'overrideTgl', dibuatoleh:'dibuatOleh',
-  diubaholeh:'diubahOleh', dicetaktgl:'dicetakTgl', dicetakoleh:'dicetakOleh' };
+  diubaholeh:'diubahOleh', dicetaktgl:'dicetakTgl', dicetakoleh:'dicetakOleh',
+  ditempeltgl:'ditempelTgl', ditempeloleh:'ditempelOleh' };
 const PETA_HAPUS = { alasanhapus:'alasanHapus', dihapusoleh:'dihapusOleh', dihapustgl:'dihapusTgl',
   dicetaktgl:'dicetakTgl', dicetakoleh:'dicetakOleh' };
 const PETA_PINJAM = { catbalik:'catBalik', kondbalik:'kondBalik', asallok:'asalLok' };
@@ -2788,6 +2798,12 @@ function srv(nama, ...args) {
 
       case 'apiTandaiCetakMassal':
         return cekGalat(await supa.rpc('rpc_tandai_cetak_massal', { p_kode_list: args[0], p_dicetak: args[1] }));
+
+      case 'apiTandaiTempel':
+        return petakan(cekGalat(await supa.rpc('rpc_tandai_tempel', { p_kode: args[0], p_ditempel: args[1] })), PETA_ASET);
+
+      case 'apiTandaiTempelMassal':
+        return cekGalat(await supa.rpc('rpc_tandai_tempel_massal', { p_kode_list: args[0], p_ditempel: args[1] }));
 
       case 'apiTerapkanPola':
         return cekGalat(await supa.rpc('rpc_terapkan_pola', { p_pola: args[0], p_timpa: args[1] }));
@@ -3070,6 +3086,22 @@ tandaiKode=async function(list){
   const n=await aksi('apiTandaiCetakMassal',list,true);
   toast(n?`${n} aset ditandai sudah dicetak`:'Semua sudah ditandai','g');
   closeAll();
+};
+/* Ditempel = stiker label sudah benar-benar ditempel ke aset fisik — beda
+   dari dicetak (labelnya sudah di-generate). Baru boleh ditandai sudah
+   ditempel kalau sudah dicetak dulu; server juga menegakkan aturan ini. */
+togTempel=async function(k){
+  const x=A(k);if(!x)return;
+  if(!x.dicetak)return toast('Cetak labelnya dulu sebelum ditandai sudah ditempel','r');
+  const baru=!x.ditempel;
+  await aksiAset('apiTandaiTempel',k,baru);
+  toast(baru?'Ditandai sudah ditempel':'Ditandai belum ditempel','g');
+  if($('#dw').classList.contains('on')){closeAll();openAsset(k)}
+};
+massalTempel=async function(){
+  const list=[...SEL];
+  const n=await aksi('apiTandaiTempelMassal',list,true);
+  toast(n?`${n} aset ditandai sudah ditempel`:'Tidak ada yang bisa ditandai — pastikan sudah dicetak dulu','g');
 };
 
 applyPola=async function(ow){
