@@ -658,8 +658,12 @@ function setLang(l){LANG=l;document.documentElement.lang=l;log('UBAH','KONFIG','
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const rp=n=>'Rp '+Math.round(n).toLocaleString('id-ID');
 const rpk=n=>'Rp '+(n>=1e9?(n/1e9).toFixed(2).replace('.',',')+' M':n>=1e6?Math.round(n/1e6)+' jt':Math.round(n).toLocaleString('id-ID'));
-const dt=d=>d?d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
-const ds=d=>d?d.toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—';
+/* Tanggal dari Supabase kadang masih berupa string kalau namanya belum
+   terdaftar di TGL_FIELD. Formatter tampilan tidak boleh sampai melempar
+   error — satu field yang lolos jangan sampai merobohkan seluruh render. */
+const keTgl=d=>d instanceof Date?(isNaN(d)?null:d):(d?(x=>isNaN(x)?null:x)(new Date(d)):null);
+const dt=d=>{const v=keTgl(d);return v?v.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—'};
+const ds=d=>{const v=keTgl(d);return v?v.toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—'};
 const dy=(x,y)=>Math.round((x-y)/864e5);
 const nm=(arr,k)=>(DB[arr].find(x=>x.k===k)||{}).n||k;
 const dn=k=>nm('dept',k),kn=k=>nm('kat',k),ln=k=>nm('lok',k);
@@ -2910,7 +2914,7 @@ function srv(nama, ...args) {
    berbentuk camelCase, jadi disalin apa adanya. */
 
 const TGL_FIELD=['tgl','garansi','overrideTgl','dibuat','diubah','keluar','jt','balik',
- 'jadwal','pelaksanaan','dicatat','waktu','mulai','selesai','dipindai','dijalankan','w','dihapusTgl','dicetakTgl'];
+ 'jadwal','pelaksanaan','dicatat','waktu','mulai','selesai','dipindai','dijalankan','w','dihapusTgl','dicetakTgl','ditempelTgl'];
 function hidupkanTanggal(o){
   if(o===null||o===undefined)return o;
   if(Array.isArray(o))return o.map(hidupkanTanggal);
