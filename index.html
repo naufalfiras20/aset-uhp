@@ -748,6 +748,26 @@ function tandaiKode(list,ket){
  closeAll();render();
 }
 function massalCetak(){tandaiKode([...SEL],'aksi massal')}
+/* Ditempel = stikernya sudah benar-benar menempel di asetnya, beda dari
+   dicetak. Sama seperti togCetak, versi ini ditimpa adaptor Supabase di
+   bawah — dideklarasikan di sini supaya sudah ada saat window.__uhp disusun. */
+function togTempel(k){
+ const x=A(k);if(!x)return;
+ if(!x.ditempel&&!x.dicetak)return toast('Cetak labelnya dulu sebelum ditandai sudah ditempel','r');
+ x.ditempel=!x.ditempel;
+ if(x.ditempel){x.ditempelTgl=new Date();x.ditempelOleh=USER.nama}
+ else{x.ditempelTgl=null;x.ditempelOleh=''}
+ log('UBAH','ASET',k,x.ditempel?`Label ${x.nama} ditandai sudah ditempel`:`Label ${x.nama} ditandai belum ditempel`);
+ toast(x.ditempel?'Ditandai sudah ditempel':'Ditandai belum ditempel','g');
+ if($('#dw').classList.contains('on')){closeAll();openAsset(k)}
+ render();
+}
+function massalTempel(){
+ let c=0;[...SEL].forEach(k=>{const x=A(k);if(x&&x.dicetak&&!x.ditempel){x.ditempel=true;x.ditempelTgl=new Date();x.ditempelOleh=USER.nama;c++}});
+ log('UBAH','ASET','—',`${c} aset ditandai sudah ditempel (aksi massal)`);
+ toast(c?`${c} aset ditandai sudah ditempel`:'Tidak ada yang bisa ditandai — pastikan sudah dicetak dulu','g');
+ closeAll();render();
+}
 const cv=()=>`<svg viewBox="0 0 24 24" style="margin-left:auto;width:11px;height:11px;stroke:var(--lb4);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="m9 5 7 7-7 7"/></svg>`;
 /* Rincian di balik tiap angka dashboard */
 const DRILL={
