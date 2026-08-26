@@ -1124,6 +1124,7 @@ function vPinjam(){
    <div style="margin-top:12px"><div class="f2">
     <div class="fl"><label>Peminjam</label><select id="pO">${DB.org.map(o=>`<option>${es(o.n)}</option>`).join('')}</select></div>
     <div class="fl"><label>Proyek</label><select id="pP">${DB.proy.map(o=>`<option>${es(o.n)}</option>`).join('')}</select></div></div>
+    <div class="fl"><label>Lokasi peminjaman</label><select id="pL">${DB.lok.filter(o=>o.k!=='VND').map(o=>`<option value="${o.k}" ${o.k==='EXT'?'selected':''}>${es(o.n)}</option>`).join('')}</select></div>
     <div class="f2"><div class="fl"><label>Tanggal keluar</label><input type="date" class="in" id="pK" value="2026-08-02"></div>
     <div class="fl"><label>Rencana kembali</label><input type="date" class="in" id="pJ" value="2026-08-09"></div></div>
     <div class="fl"><label>Catatan peminjaman</label><textarea class="in" id="pC" placeholder="Opsional — misal: dibawa ke lokasi Bogor, kelengkapan 4 baterai + koper"></textarea></div>
@@ -3139,7 +3140,7 @@ clearLinks=async function(){
 };
 
 doPinjam=async function(){
-  await aksi('apiPinjam',{kode:[...CART],org:$('#pO').value,proy:$('#pP').value,
+  await aksi('apiPinjam',{kode:[...CART],org:$('#pO').value,proy:$('#pP').value,lok:$('#pL').value,
     keluar:$('#pK').value,jt:$('#pJ').value,catatan:$('#pC').value.trim()});
   toast(CART.length+' unit dipinjamkan','g'); CART=[];
 };
