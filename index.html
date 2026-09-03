@@ -1007,7 +1007,13 @@ function vDash(){
  </div>`;
 }
 
-let F={q:'',dept:'',kat:'',stat:'',link:'',kond:'',cara:'',lok:'',tglA:'',tglB:'',cetak:'',tempel:'',sort:'kode',dir:1};
+let F={q:'',dept:'',kat:'',stat:'',link:'',kond:'',cara:'',lok:[],tglA:'',tglB:'',cetak:'',tempel:'',sort:'kode',dir:1};
+let LOK_FILTER_OPEN=false;
+document.addEventListener('click', e => {
+ if(!LOK_FILTER_OPEN) return;
+ if(e.target.closest('#flkBtn,#flkPanel')) return;
+ LOK_FILTER_OPEN=false; render();
+});
 function vReg(){
  let r=DB.aset.filter(x=>{
   if(F.dept&&x.dept!==F.dept)return 0;
@@ -1016,7 +1022,7 @@ function vReg(){
   if(F.stat!=='DILEPAS'&&x.stat==='DILEPAS')return 0;
   if(F.kond&&x.kond!==F.kond)return 0;
   if(F.cara&&(x.cara||'BELI')!==F.cara)return 0;
-  if(F.lok&&x.lok!==F.lok)return 0;
+  if(F.lok.length&&!F.lok.includes(x.lok))return 0;
   /* Bandingkan per hari, bukan per milidetik — jam pada data tidak boleh
      membuat aset di tanggal batas ikut tersaring keluar. */
   if(F.tglA||F.tglB){
@@ -1042,7 +1048,16 @@ function vReg(){
   <select id="fk" style="width:auto"><option value="">Semua kategori</option>${DB.kat.map(d=>`<option value="${d.k}" ${F.kat===d.k?'selected':''}>${es(d.n)}</option>`).join('')}</select>
   <select id="fkd" style="width:auto"><option value="">Semua kondisi</option>${Object.entries(KD).map(([kk,v])=>`<option value="${kk}" ${F.kond===kk?'selected':''}>${v[1]}</option>`).join('')}</select>
   <select id="fc" style="width:auto"><option value="">Semua cara perolehan</option>${Object.entries(JPEROLEH).map(([kk,v])=>`<option value="${kk}" ${F.cara===kk?'selected':''}>${v}</option>`).join('')}</select>
-  <select id="flk" style="width:auto"><option value="">Semua lokasi</option>${DB.lok.map(d=>`<option value="${d.k}" ${F.lok===d.k?'selected':''}>${es(d.n)}</option>`).join('')}</select>
+  <div style="position:relative;display:inline-block">
+   <button class="b s" id="flkBtn" style="width:auto" type="button">${ic('pin')}${F.lok.length?F.lok.length+' lokasi':'Semua lokasi'} <span style="opacity:.5;margin-left:2px">▾</span></button>
+   ${LOK_FILTER_OPEN?`<div id="flkPanel" style="position:absolute;top:100%;left:0;z-index:50;background:var(--surf);border:1px solid var(--sep2);border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.14);padding:6px;margin-top:4px;width:230px;max-height:300px;overflow:auto">
+     <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 6px 6px;margin-bottom:4px;border-bottom:1px solid var(--sep2)">
+      <b style="font-size:11px;color:var(--lb3)">FILTER LOKASI</b>
+      <button class="b s" id="flkReset" type="button" style="padding:1px 7px;font-size:10.5px" ${F.lok.length?'':'disabled style="opacity:.4"'}>Reset</button>
+     </div>
+     ${DB.lok.map(d=>`<label style="display:flex;align-items:center;gap:7px;padding:5px 6px;font-size:12px;cursor:pointer;border-radius:6px" onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background=''"><input type="checkbox" class="flkChk" value="${d.k}" ${F.lok.includes(d.k)?'checked':''} style="width:auto;cursor:pointer"> ${es(d.n)}</label>`).join('')}
+    </div>`:''}
+  </div>
   <select id="fl" style="width:auto"><option value="">QR: semua</option><option value="ada" ${F.link==='ada'?'selected':''}>Sudah ada QR</option><option value="no" ${F.link==='no'?'selected':''}>Belum ada QR</option></select>
   <select id="fpc" style="width:auto"><option value="">Cetak: semua</option><option value="sudah" ${F.cetak==='sudah'?'selected':''}>Sudah dicetak</option><option value="belum" ${F.cetak==='belum'?'selected':''}>Belum dicetak</option></select>
   <select id="fpt" style="width:auto"><option value="">Ditempel: semua</option><option value="sudah" ${F.tempel==='sudah'?'selected':''}>Sudah ditempel</option><option value="belum" ${F.tempel==='belum'?'selected':''}>Belum ditempel</option></select>
@@ -1053,7 +1068,7 @@ function vReg(){
    <input type="date" id="ftb" value="${es(F.tglB)}" style="width:auto;padding:3px 6px" title="Perolehan sampai tanggal">
   </div>
   <div class="seg">${['','TERSEDIA','DIPINJAM','PERBAIKAN','HILANG','DILEPAS'].map(s=>`<div class="${F.stat===s?'on':''}" data-st="${s}">${s?ST[s][1]:'Semua'}</div>`).join('')}</div>
-  ${(F.dept||F.kat||F.kond||F.cara||F.lok||F.link||F.cetak||F.tempel||F.stat||F.tglA||F.tglB||F.q)?`<button class="b s" id="fclr" title="Bersihkan semua filter">${ic('x')}Bersihkan filter</button>`:''}
+  ${(F.dept||F.kat||F.kond||F.cara||F.lok.length||F.link||F.cetak||F.tempel||F.stat||F.tglA||F.tglB||F.q)?`<button class="b s" id="fclr" title="Bersihkan semua filter">${ic('x')}Bersihkan filter</button>`:''}
   <div style="flex:1"></div>
   ${can('impor')?`<button class="b s" id="imp">${ic('up')}Impor CSV</button>`:''}
   <button class="b s" id="exp">${ic('dl')}Ekspor CSV</button>
@@ -1086,7 +1101,7 @@ function vReg(){
   ${can('lihatFin')?`<td class="nu">${x.nb?Math.round(x.nb).toLocaleString('id-ID'):'<span style="color:var(--lb4)">0</span>'}</td>`:''}</tr>`}).join(''):
   `<tr><td colspan="${can('lihatFin')?14:13}"><div class="emp">${ic('search')}<b>Tidak ada yang cocok</b><span>Coba ubah filter atau kata kuncinya.</span></div></td></tr>`}
  </tbody></table></div>
- <p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Menampilkan ${r.length} dari ${DB.aset.length} aset · ${punyaLink()} sudah punya QR · ${sudahCetak()} sudah dicetak.${(F.tglA||F.tglB)?` Perolehan ${F.tglA?dt(pd(F.tglA)):'paling awal'} sampai ${F.tglB?dt(pd(F.tglB)):'terakhir'}.`:''}${F.lok?` Lokasi ${es(ln(F.lok))}.`:''}</p>`;
+ <p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Menampilkan ${r.length} dari ${DB.aset.length} aset · ${punyaLink()} sudah punya QR · ${sudahCetak()} sudah dicetak.${(F.tglA||F.tglB)?` Perolehan ${F.tglA?dt(pd(F.tglA)):'paling awal'} sampai ${F.tglB?dt(pd(F.tglB)):'terakhir'}.`:''}${F.lok.length?` Lokasi ${F.lok.map(k=>es(ln(k))).join(', ')}.`:''}</p>`;
 }
 
 let CART=[];
@@ -2521,13 +2536,19 @@ function bind(){
  $$('[data-st]').forEach(e=>e.onclick=()=>{F.stat=e.dataset.st;render()});
  $$('[data-dn]').forEach(e=>e.onclick=()=>{const m=DB.rawat.find(r=>r.id===e.dataset.dn);m.status='SELESAI';log('UBAH','RAWAT',m.kode,`Perawatan ${namaAset(m.kode)} selesai`);toast('Perawatan ditandai selesai','g');render()});
  {const e=$('#fc');if(e)e.onchange=()=>{F.cara=e.value;render()}}
- {const e=$('#flk');if(e)e.onchange=()=>{F.lok=e.value;render()}}
+ {const b=$('#flkBtn');if(b)b.onclick=(e)=>{e.stopPropagation();LOK_FILTER_OPEN=!LOK_FILTER_OPEN;render()}}
+ {const p=$('#flkPanel');if(p)p.onclick=e=>e.stopPropagation()}
+ $$('.flkChk').forEach(c=>c.onchange=()=>{
+  if(c.checked){if(!F.lok.includes(c.value))F.lok.push(c.value)}else{F.lok=F.lok.filter(v=>v!==c.value)}
+  render();
+ });
+ {const rb=$('#flkReset');if(rb)rb.onclick=()=>{F.lok=[];render()}}
  {const e=$('#fta');if(e)e.onchange=()=>{F.tglA=e.value;render()}}
  {const e=$('#ftb');if(e)e.onchange=()=>{F.tglB=e.value;render()}}
  {const e=$('#fpc');if(e)e.onchange=()=>{F.cetak=e.value;render()}}
  {const e=$('#fpt');if(e)e.onchange=()=>{F.tempel=e.value;render()}}
  {const e=$('#fclr');if(e)e.onclick=()=>{
-   F.dept='';F.kat='';F.kond='';F.cara='';F.lok='';F.link='';F.cetak='';F.tempel='';F.stat='';F.tglA='';F.tglB='';F.q='';
+   F.dept='';F.kat='';F.kond='';F.cara='';F.lok=[];F.link='';F.cetak='';F.tempel='';F.stat='';F.tglA='';F.tglB='';F.q='';LOK_FILTER_OPEN=false;
    const g=$('#gs');if(g)g.value='';
    toast('Filter dibersihkan','g');render()}}
  $$('[data-lk]').forEach(e=>e.onclick=v=>{v.stopPropagation();editLink(e.dataset.lk)});
