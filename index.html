@@ -1063,6 +1063,7 @@ function vReg(){
   <div style="flex:1"></div>
   <button class="b s" id="mLabel">${ic('print')}Cetak label</button>
   ${can('editOps')?`<button class="b s" id="mCetak">${ic('check')}Tandai sudah dicetak</button><button class="b s" id="mTempel">${ic('check')}Tandai sudah ditempel</button><button class="b s" id="mLok2">${ic('pin')}Pindah lokasi</button><button class="b s" id="mPola">${ic('tag')}Isi link dari pola</button>`:''}
+  ${can('editOps')||can('editFin')?`<button class="b s" id="mEdit">${ic('edit')}Edit massal</button>`:''}
   <button class="b s" id="mClr">Batal pilih</button>
  </div></div>`:''}
  <div class="cd" style="margin:0">
@@ -1793,7 +1794,8 @@ function addAsset(){
   <div class="fl"><label>Penyusutan per bulan</label><input class="in" id="nPB" disabled style="opacity:.6"></div></div>
   <div class="f2"><div class="fl"><label>Sudah tersusut</label><input class="in" id="nAk" disabled style="opacity:.6"></div>
   <div class="fl"><label>Lokasi</label><select id="nL">${DB.lok.map(o=>`<option value="${o.k}">${es(o.n)}</option>`).join('')}</select></div></div>
-  <div class="f2"><div class="fl"><label>Kondisi</label><select id="nKond">${Object.entries(KD).filter(([kk])=>kk!=='HILANG').map(([kk,v])=>`<option value="${kk}" ${kk==='BAGUS'?'selected':''}>${v[1]}</option>`).join('')}</select></div></div>
+  <div class="f2"><div class="fl"><label>Kondisi</label><select id="nKond">${Object.entries(KD).filter(([kk])=>kk!=='HILANG').map(([kk,v])=>`<option value="${kk}" ${kk==='BAGUS'?'selected':''}>${v[1]}</option>`).join('')}</select></div>
+  <div class="fl"><label>Pemegang <span style="color:var(--lb4);font-weight:400">— opsional</span></label><select id="nP"><option value="">— tidak ada —</option>${DB.org.map(o=>`<option>${es(o.n)}</option>`).join('')}</select></div></div>
   <div class="f2"><div class="fl"><label>Nomor seri</label><input class="in" id="nS" placeholder="opsional"></div>
   <div class="fl"><label>Garansi berakhir</label><input class="in" id="nG" type="date"></div></div>
   <div class="fl"><label>Link barcode <span style="color:var(--lb4);font-weight:400">— opsional, isi QR</span></label>
@@ -2536,7 +2538,7 @@ function bind(){
  {const g=$('#hpGo');if(g)g.onclick=()=>doHapusAset(g.dataset.k)}
  $$('[data-dr]').forEach(e=>e.onclick=()=>drill(e.dataset.dr));
  const sa=$('#selAll');if(sa)sa.onclick=()=>{const ks=[...$$('tbody tr[data-k]')].map(e=>e.dataset.k);selAll(ks)};
- b2('#mLabel',labelMassal);b2('#mCetak',massalCetak);b2('#mTempel',massalTempel);b2('#mLok2',massalLokasi);b2('#mPola',massalPola);
+ b2('#mLabel',labelMassal);b2('#mCetak',massalCetak);b2('#mTempel',massalTempel);b2('#mLok2',massalLokasi);b2('#mPola',massalPola);b2('#mEdit',massalEdit);
  b2('#mClr',()=>{SEL.clear();render()});b2('#imp',importCSV);
  const dlp=$('#doLepas');if(dlp)dlp.onclick=()=>doLepas(dlp.dataset.k);
  $$('[data-bar]').forEach(e=>e.onclick=()=>{Object.assign(F,{q:'',dept:'',kat:e.dataset.bar,stat:'',link:'',sort:'kode',dir:1});go('reg')});
@@ -2839,6 +2841,9 @@ function srv(nama, ...args) {
       case 'apiPindahMassal':
         return cekGalat(await supa.rpc('rpc_pindah_massal', { p_kode_list: args[0], p_lok: args[1] }));
 
+      case 'apiUbahMassal':
+        return cekGalat(await supa.rpc('rpc_ubah_massal', { p_kode_list: args[0], f: args[1] }));
+
       case 'apiHapusAset':
         cekGalat(await supa.rpc('rpc_hapus_aset', { p_kode: args[0], p_alasan: args[1], p_konfirmasi: args[2] }));
         return null;
@@ -3035,7 +3040,7 @@ doAdd=async function(){
     lok:$('#nL').value,kond:$('#nKond')?$('#nKond').value:'BAGUS',
     cara:$('#nC')?$('#nC').value:'BELI',
     catatan:$('#nCat')?$('#nCat').value.trim():'',
-    link:lnk,
+    link:lnk,pic:$('#nP')?$('#nP').value:'',
     sn:$('#nS').value.trim(),garansi:$('#nG')&&$('#nG').value||null});
   toast('Aset ditambahkan','g'); closeAll();
 };
@@ -3230,6 +3235,33 @@ massalLokasi=function(){
   const lk=$('#mLok').value; const list=[...SEL];
   await aksi('apiPindahMassal',list,lk);
   toast(list.length+' aset dipindahkan','g');SEL.clear();closeAll();
+ };
+};
+/* Edit massal — tiap field opsional lewat centang sendiri-sendiri, supaya
+   field yang tidak dicentang tidak ikut tersentuh (beda dari kosong berarti
+   "hapus isinya"). Pemegang = operasional (editOps), tanggal perolehan =
+   finansial karena mempengaruhi penyusutan (editFin) — RPC menegakkan
+   masing-masing izin per field juga, ini cuma agar terlihat di UI. */
+massalEdit=function(){
+ modal('Edit massal '+SEL.size+' aset',`
+  <p style="font-size:11.5px;color:var(--lb3);margin-bottom:12px;line-height:1.5">Centang field yang mau diubah. Field yang tidak dicentang tidak akan disentuh sama sekali.</p>
+  ${can('editOps')?`<div class="fl"><label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" id="mChkPic" style="width:auto"> Ubah pemegang</label>
+   <select id="mPic" disabled style="opacity:.5"><option value="">— tidak ada —</option>${DB.org.map(o=>`<option>${es(o.n)}</option>`).join('')}</select></div>`:''}
+  ${can('editFin')?`<div class="fl" style="margin-top:${can('editOps')?'10px':'0'}"><label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" id="mChkTgl" style="width:auto"> Ubah tanggal perolehan</label>
+   <input class="in" id="mTgl" type="date" disabled style="opacity:.5" max="${iso(TODAY)}" value="${iso(TODAY)}"></div>`:''}
+  ${!can('editOps')&&!can('editFin')?`<div class="emp" style="padding:20px 10px">${ic('shield')}<b>Tidak ada izin</b><span>Peran ${PERAN[USER.peran].n} tidak boleh mengubah field ini.</span></div>`:''}`,
+  `<button class="b" onclick="closeAll()">Batal</button><button class="b n" id="doMEditMassal">Simpan</button>`);
+ const cp=$('#mChkPic'),ct=$('#mChkTgl');
+ if(cp)cp.onchange=()=>{const s=$('#mPic');s.disabled=!cp.checked;s.style.opacity=cp.checked?1:.5};
+ if(ct)ct.onchange=()=>{const i=$('#mTgl');i.disabled=!ct.checked;i.style.opacity=ct.checked?1:.5};
+ $('#doMEditMassal').onclick=async ()=>{
+  const f={};
+  if(cp&&cp.checked)f.pic=$('#mPic').value;
+  if(ct&&ct.checked)f.tgl=$('#mTgl').value;
+  if(!Object.keys(f).length)return toast('Centang minimal satu field yang mau diubah','r');
+  const list=[...SEL];
+  const n=await aksi('apiUbahMassal',list,f);
+  toast((n||list.length)+' aset diubah','g');SEL.clear();closeAll();
  };
 };
 
