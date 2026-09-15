@@ -1178,7 +1178,31 @@ function vPinjam(){
     <button class="b p" id="doP" style="width:100%;justify-content:center;padding:6px">Konfirmasi pinjam · ${CART.length} unit</button>
    </div>`:`<div class="emp" style="padding:22px 10px">${ic('swap')}<b>Belum ada gear dipilih</b><span>Pindai kode untuk menambahkan.</span></div>`}`}
   </div></div></div>
- </div>`;
+ </div>
+ ${vRiwayatPinjam()}`;
+}
+
+let RP_Q='';
+function vRiwayatPinjam(){
+ let riw=DB.pinjam.filter(l=>!l.aktif).sort((a,b)=>b.balik-a.balik);
+ if(RP_Q){const q=RP_Q.toLowerCase();riw=riw.filter(l=>(l.kode+namaAset(l.kode)+l.org+l.proy).toLowerCase().includes(q))}
+ return`
+ <div class="gh" style="margin-top:18px;display:flex;align-items:center;justify-content:space-between">
+  <span>Riwayat peminjaman · ${riw.length}</span>
+  <input class="in" id="rpQ" value="${es(RP_Q)}" placeholder="Cari kode, aset, peminjam, proyek…" style="width:auto;max-width:260px;font-size:11.5px;padding:4px 8px">
+ </div>
+ <div class="cd" style="margin:0"><table>
+ <thead><tr><th style="width:104px">Kode</th><th>Aset</th><th style="width:80px">Peminjam</th><th style="width:130px">Periode</th><th style="width:110px">Dikembalikan</th><th style="width:96px">Kondisi kembali</th></tr></thead>
+ <tbody>${riw.length?riw.slice(0,50).map(l=>{const x=AX(l.kode);
+  return`<tr class="ck" data-k="${l.kode}"><td class="mn">${l.kode}</td>
+  <td><div class="c1">${es(x?x.nama:l.kode)}${capHapus(l.kode)}</div><div class="c2">${es(l.proy)}${l.catBalik?' · '+es(l.catBalik.slice(0,28))+(l.catBalik.length>28?'…':''):''}</div></td>
+  <td>${es(l.org)}</td>
+  <td><div style="font-size:12px">${ds(l.keluar)} → ${ds(l.jt)}</div><div class="c2">${durasi(l)} hari</div></td>
+  <td>${ds(l.balik)}${dy(l.balik,l.jt)>0?`<div class="c2" style="color:var(--rd)">telat ${dy(l.balik,l.jt)} hari</div>`:''}</td>
+  <td>${l.kondBalik?kox(l.kondBalik):'<span style="color:var(--lb4)">—</span>'}</td></tr>`}).join(''):
+  `<tr><td colspan="6"><div class="emp">${ic('check')}<b>Belum ada riwayat</b><span>${RP_Q?'Tidak ada yang cocok dengan pencarian.':'Riwayat muncul begitu ada aset yang dikembalikan.'}</span></div></td></tr>`}
+ </tbody></table></div>
+ ${riw.length>50?`<p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Menampilkan 50 dari ${riw.length} riwayat. Untuk riwayat lengkap dengan filter periode, buka menu Laporan → Riwayat peminjaman.</p>`:''}`;
 }
 
 function vRawat(){
@@ -2633,6 +2657,7 @@ function bind(){
  $$('[data-peran]').forEach(e=>e.onclick=()=>{USER.peran=e.dataset.peran;
   log('UBAH','KONFIG','peran','Peran diubah ke '+PERAN[USER.peran].n);toast('Peran: '+PERAN[USER.peran].n,'g');closeAll();render()});
  b('#exp',expCsv);b('#doP',doPinjam);b('#stO',startOpname);b('#runR',runRekon);
+ {const rp=$('#rpQ');if(rp)rp.oninput=()=>{RP_Q=rp.value;render();$('#rpQ').focus()}}
  {const cl=$('#clO');if(cl)cl.onclick=()=>closeOpname(cl.dataset.sesi)}
  {const dc=$('#doC');if(dc)dc.onclick=()=>doCloseOpname(dc.dataset.sesi)}
  {const bb=$('#opBukaBaru');if(bb)bb.onclick=()=>{OPNAME_BUKA_BARU=true;render()}}
