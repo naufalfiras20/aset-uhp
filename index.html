@@ -1207,8 +1207,14 @@ function vRawat(){
 function vOpname(){
  if(!DB.opname)return`<div class="cd" style="max-width:440px"><div class="cdh"><div class="cdt">Mulai sesi opname</div></div><div class="cdb">
   <div class="fl"><label>Nama sesi</label><input class="in" id="oN" value="Q3 2026"></div>
-  <div class="fl"><label>Cakupan lokasi</label><select id="oL"><option value="">Semua lokasi (${DB.aset.length} aset)</option>${DB.lok.map(l=>`<option value="${l.k}">${es(l.n)} (${DB.aset.filter(x=>x.lok===l.k).length})</option>`).join('')}</select></div>
-  <button class="b p" id="stO" style="width:100%;justify-content:center;padding:6px;margin-top:4px">Buka sesi</button>
+  <div class="fl"><label>Cakupan lokasi</label><select id="oL">
+   <option value="" selected disabled>— Pilih lokasi —</option>
+   ${DB.lok.map(l=>`<option value="${l.k}">${es(l.n)} (${DB.aset.filter(x=>x.lok===l.k).length})</option>`).join('')}
+   <option value="__ALL__">⚠ Semua lokasi — audit penuh (${DB.aset.length} aset)</option>
+  </select></div>
+  <div id="oAllWarn" style="display:none;margin-top:2px"><div class="fl"><label style="color:var(--rd)">Ketik SEMUA untuk konfirmasi audit penuh semua lokasi sekaligus</label><input class="in" id="oAllConf" placeholder="SEMUA"></div></div>
+  <label style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:11.5px;color:var(--lb2);cursor:pointer"><input type="checkbox" id="oAck" style="margin-top:2px;width:auto">Saya sudah memastikan cakupan lokasi ini benar. Aset yang tidak diperiksa di sesi ini akan ditandai <b>Hilang</b> saat sesi ditutup nanti.</label>
+  <button class="b p" id="stO" disabled style="width:100%;justify-content:center;padding:6px;margin-top:10px">Buka sesi</button>
   <p style="font-size:11.5px;color:var(--lb3);margin-top:10px;line-height:1.5">Saat sesi dibuka, semua aset dalam cakupan dicatat sebagai belum diperiksa. Pemindaian mencocokkan lokasi sebenarnya dengan lokasi tercatat.</p>
  </div></div>`;
  const o=DB.opname,d=o.detail;
@@ -2642,6 +2648,18 @@ function bind(){
  $$('[data-peran]').forEach(e=>e.onclick=()=>{USER.peran=e.dataset.peran;
   log('UBAH','KONFIG','peran','Peran diubah ke '+PERAN[USER.peran].n);toast('Peran: '+PERAN[USER.peran].n,'g');closeAll();render()});
  b('#exp',expCsv);b('#doP',doPinjam);b('#stO',startOpname);b('#clO',closeOpname);b('#doC',()=>doCloseOpname());b('#runR',runRekon);
+ {const oL=$('#oL'),oAck=$('#oAck'),oAllW=$('#oAllWarn'),oAllC=$('#oAllConf'),stO=$('#stO');
+  if(oL&&oAck&&stO){
+   const cekOpname=()=>{
+    const semua=oL.value==='__ALL__';
+    if(oAllW)oAllW.style.display=semua?'':'none';
+    const semuaOk=!semua||(oAllC&&oAllC.value.trim().toUpperCase()==='SEMUA');
+    stO.disabled=!(oL.value&&oAck.checked&&semuaOk);
+   };
+   oL.onchange=cekOpname;oAck.onchange=cekOpname;if(oAllC)oAllC.oninput=cekOpname;
+   cekOpname();
+  }
+ }
  b('#finR',()=>{log('UBAH','REKON',DB.rekon.periode,`Rekonsiliasi ${DB.rekon.periode} ditandai tuntas`);toast('Rekonsiliasi ditandai tuntas','g');render()});
  b('#addW',()=>{modal('Jadwal perawatan',`
    <div class="fl"><label>Aset</label><select id="wK">${DB.aset.filter(x=>x.stat!=='HILANG').map(x=>`<option value="${x.kode}">${x.kode} — ${es(x.nama)}</option>`).join('')}</select></div>
@@ -3244,7 +3262,9 @@ doPulihkanHilang=async function(k){
 };
 
 startOpname=async function(){
-  await aksi('apiBukaOpname',{nama:$('#oN').value.trim(),lok:$('#oL').value});
+  const lokRaw=$('#oL').value;
+  if(!lokRaw){toast('Pilih cakupan lokasi dulu','r');return}
+  await aksi('apiBukaOpname',{nama:$('#oN').value.trim(),lok:lokRaw==='__ALL__'?'':lokRaw});
   toast('Sesi opname dibuka','g');
 };
 scanOpname=async function(k){
