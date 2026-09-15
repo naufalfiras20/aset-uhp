@@ -1682,8 +1682,8 @@ function scanOpname(k){
 }
 function closeOpname(){
  const o=DB.opname,bm=o.detail.filter(x=>x.st==='BELUM');
- modal('Tutup sesi opname',`<p style="font-size:12.5px;color:var(--lb2);margin-bottom:12px;line-height:1.5">${bm.length} aset belum diperiksa. Pilih status tiap aset — default tidak ditemukan (jadi hilang), atau tandai ada bila ditemukan manual.</p>
- ${bm.length?`<div class="ins" style="max-height:220px;overflow-y:auto">${bm.map(s=>`<div class="kr"><dt class="mn">${s.kode}</dt><dd style="text-align:right"><div style="font-size:11.5px;color:var(--lb3);margin-bottom:3px">${es(namaAset(s.kode).slice(0,24))}</div><select class="in" data-belum="${s.kode}" style="font-size:11.5px;padding:3px 6px;width:auto"><option value="tidak">Tidak ditemukan</option><option value="ada">Ada</option></select></dd></div>`).join('')}</div>`:'<p style="font-size:12.5px;color:var(--gr)">Semua aset sudah diperiksa.</p>'}`,
+ modal('Tutup sesi opname',`<p style="font-size:12.5px;color:var(--lb2);margin-bottom:12px;line-height:1.5">${bm.length} aset belum diperiksa. Pilih status tiap aset — default tidak ditemukan (jadi hilang), atau tandai ada bila ditemukan manual (kondisinya juga bisa diperbarui).</p>
+ ${bm.length?`<div class="ins" style="max-height:220px;overflow-y:auto">${bm.map(s=>{const x=A(s.kode);return`<div class="kr"><dt class="mn">${s.kode}</dt><dd style="text-align:right"><div style="font-size:11.5px;color:var(--lb3);margin-bottom:3px">${es(namaAset(s.kode).slice(0,24))}</div><select class="in" data-belum="${s.kode}" style="font-size:11.5px;padding:3px 6px;width:auto" onchange="this.nextElementSibling.style.display=this.value==='ada'?'inline-block':'none'"><option value="tidak">Tidak ditemukan</option><option value="ada">Ada</option></select><select class="in" data-kond="${s.kode}" style="font-size:11.5px;padding:3px 6px;width:auto;display:none;margin-top:4px">${Object.entries(KD).filter(([kk])=>kk!=='HILANG').map(([kk,v])=>`<option value="${kk}" ${kk===x.kond?'selected':''}>${v[1]}</option>`).join('')}</select></dd></div>`}).join('')}</div>`:'<p style="font-size:12.5px;color:var(--gr)">Semua aset sudah diperiksa.</p>'}`,
  `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="doC">Tutup sesi</button>`);
 }
 let CAMSCAN=null;function scanKamera(){modal('Pindai QR',`<div style="text-align:center"><video id="camVid" style="width:100%;max-width:320px;border-radius:9px;background:#000"></video><p style="font-size:11.5px;color:var(--lb3);margin-top:8px">Arahkan kamera ke QR pada label aset</p></div>`,`<button class="b" onclick="closeAll()">Selesai</button>`);const v=$('#camVid');let last='',lastT=0;CAMSCAN=new QrScanner(v,r=>{const k=(r.data||r).trim();const now=Date.now();if(k===last&&now-lastT<1500)return;last=k;lastT=now;scanOpname(k)},{highlightScanRegion:true,highlightCodeOutline:true});CAMSCAN.start().catch(e=>toast('Gagal buka kamera: '+e.message,'r'))}function doCloseOpname(){
@@ -2641,7 +2641,7 @@ function bind(){
  const df=$('#doFin');if(df)df.onclick=()=>doFin(df.dataset.k);
  $$('[data-peran]').forEach(e=>e.onclick=()=>{USER.peran=e.dataset.peran;
   log('UBAH','KONFIG','peran','Peran diubah ke '+PERAN[USER.peran].n);toast('Peran: '+PERAN[USER.peran].n,'g');closeAll();render()});
- b('#exp',expCsv);b('#doP',doPinjam);b('#stO',startOpname);b('#clO',closeOpname);b('#doC',doCloseOpname);b('#runR',runRekon);
+ b('#exp',expCsv);b('#doP',doPinjam);b('#stO',startOpname);b('#clO',closeOpname);b('#doC',()=>doCloseOpname());b('#runR',runRekon);
  b('#finR',()=>{log('UBAH','REKON',DB.rekon.periode,`Rekonsiliasi ${DB.rekon.periode} ditandai tuntas`);toast('Rekonsiliasi ditandai tuntas','g');render()});
  b('#addW',()=>{modal('Jadwal perawatan',`
    <div class="fl"><label>Aset</label><select id="wK">${DB.aset.filter(x=>x.stat!=='HILANG').map(x=>`<option value="${x.kode}">${x.kode} — ${es(x.nama)}</option>`).join('')}</select></div>
@@ -2934,7 +2934,7 @@ function srv(nama, ...args) {
         return petakan(cekGalat(await supa.rpc('rpc_kondisi_opname', { p_kode: args[0], p_kond: args[1] })), PETA_ASET);
 
       case 'apiTutupOpname':
-        return cekGalat(await supa.rpc('rpc_tutup_opname', { p_ada: args[0]||[] }));
+        return cekGalat(await supa.rpc('rpc_tutup_opname', { p_ada: args[0]||[], p_konfirmasi: !!args[1] }));
 
       case 'apiTambahMaster':
         return cekGalat(await supa.rpc('rpc_tambah_master', { p_set: args[0], p_kode: args[1], p_nama: args[2] }));
@@ -3270,9 +3270,34 @@ scanOpname=async function(k){
   const el2=$('#opI'); if(el2)el2.focus();
  };
 };
-doCloseOpname=async function(){
-  const ada=[...document.querySelectorAll('[data-belum]')].filter(s=>s.value==='ada').map(s=>s.dataset.belum);await aksi('apiTutupOpname',ada);
-  toast('Sesi opname ditutup','g'); closeAll();
+doCloseOpname=async function(konfirmasi){
+  const adaSel=[...document.querySelectorAll('[data-belum]')].filter(s=>s.value==='ada');
+  const ada=adaSel.map(s=>s.dataset.belum);
+  for(const s of adaSel){
+    const k=s.dataset.belum,kondSel=$(`[data-kond="${k}"]`),x=A(k);
+    if(kondSel&&kondSel.value!==x.kond){
+      try{ await aksi('apiKondisiOpname',k,kondSel.value); }
+      catch(e){ toast('Gagal simpan kondisi '+k+': '+e.message,'r'); }
+    }
+  }
+  try{
+    await srv('apiTutupOpname',ada,konfirmasi);
+    await muatUlang();
+    toast('Sesi opname ditutup','g'); closeAll();
+  }catch(e){
+    const m=/KONFIRMASI_DIPERLUKAN: (\d+)/.exec(e.message||'');
+    if(m){
+      modal('Konfirmasi tutup sesi',`<p style="font-size:12.5px;color:var(--lb2);margin-bottom:14px;line-height:1.6"><b style="color:var(--rd)">${m[1]} aset</b> akan ditandai <b>Hilang</b> begitu sesi ini ditutup, karena tidak diperiksa dan tidak ditandai "Ada". Aksi ini bisa dipulihkan nanti lewat menu "Pulihkan aset hilang", tapi tetap pastikan dulu.</p><p style="font-size:12.5px;color:var(--lb2)">Ketik <b class="mn">${m[1]}</b> untuk konfirmasi:</p><input class="in" id="konfCount" placeholder="Ketik ${m[1]}" style="margin-top:6px">`,
+       `<button class="b" onclick="closeAll()">Batal</button><button class="b p d" id="doConf" data-n="${m[1]}">Ya, tandai hilang & tutup</button>`);
+      const btn=$('#doConf');
+      if(btn)btn.onclick=async()=>{
+        if($('#konfCount').value.trim()!==btn.dataset.n){toast('Ketikkan angkanya persis untuk konfirmasi','r');return}
+        await doCloseOpname(true);
+      };
+    } else {
+      toast('Gagal menutup sesi: '+e.message,'r');
+    }
+  }
 };
 
 doMAdd=async function(set){
