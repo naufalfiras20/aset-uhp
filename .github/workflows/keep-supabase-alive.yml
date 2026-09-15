@@ -1,0 +1,28 @@
+name: Keep Supabase project alive
+
+# Supabase's free tier pauses a project after 7 days with no API activity.
+# This pings the project's Auth settings endpoint every 3 days — well under
+# that threshold, with margin for a missed or delayed run. The endpoint is
+# public config (no table data, no RLS involved), hit with the same
+# publishable anon key already embedded in index.html, so there's nothing
+# sensitive here — just enough real API traffic to count as "used".
+
+on:
+  schedule:
+    - cron: '17 3 */3 * *'   # every 3 days at 03:17 UTC (off-peak minute, avoids the :00 pile-up)
+  workflow_dispatch: {}       # lets you trigger it manually from the Actions tab too
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Auth settings endpoint
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" \
+            "https://efmbktoqsncodatygtrs.supabase.co/auth/v1/settings" \
+            -H "apikey: sb_publishable_NyXLQF6xQyDD3K1lhaW5Dg_mEMgIx5V")
+          echo "Supabase responded with HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::Unexpected response from Supabase ($code) — project may need attention."
+            exit 1
+          fi
