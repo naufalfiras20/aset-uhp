@@ -1009,7 +1009,7 @@ function vDash(){
  </div>`;
 }
 
-let F={q:'',dept:'',kat:'',stat:'',link:'',kond:'',cara:'',lok:[],tglA:'',tglB:'',cetak:'',tempel:'',sort:'kode',dir:1};
+let F={q:'',dept:'',kat:'',stat:'',link:'',kond:'',cara:'',lok:[],tglA:'',tglB:'',cetak:'',tempel:'',nb:'',sort:'kode',dir:1};
 let LOK_FILTER_OPEN=false;
 document.addEventListener('click', e => {
  if(!LOK_FILTER_OPEN) return;
@@ -1072,6 +1072,8 @@ function vReg(){
   if(F.cetak==='belum'&&x.dicetak)return 0;
   if(F.tempel==='sudah'&&!x.ditempel)return 0;
   if(F.tempel==='belum'&&x.ditempel)return 0;
+  if(F.nb==='0'&&x.nb)return 0;
+  if(F.nb==='ada'&&!x.nb)return 0;
   if(F.q&&!(x.kode+x.nama+x.sn+ln(x.lok)+x.pic+dn(x.dept)+(x.catatan||'')).toLowerCase().includes(F.q.toLowerCase()))return 0;
   return 1});
  r.sort((p,q)=>{const a=p[F.sort],b=q[F.sort];return(typeof a==='string'?a.localeCompare(b):a-b)*F.dir});
@@ -1096,6 +1098,7 @@ function vReg(){
   <select id="fl" style="width:auto"><option value="">QR: semua</option><option value="ada" ${F.link==='ada'?'selected':''}>Sudah ada QR</option><option value="no" ${F.link==='no'?'selected':''}>Belum ada QR</option></select>
   <select id="fpc" style="width:auto"><option value="">Cetak: semua</option><option value="sudah" ${F.cetak==='sudah'?'selected':''}>Sudah dicetak</option><option value="belum" ${F.cetak==='belum'?'selected':''}>Belum dicetak</option></select>
   <select id="fpt" style="width:auto"><option value="">Ditempel: semua</option><option value="sudah" ${F.tempel==='sudah'?'selected':''}>Sudah ditempel</option><option value="belum" ${F.tempel==='belum'?'selected':''}>Belum ditempel</option></select>
+  ${can('lihatFin')?`<select id="fnb" style="width:auto"><option value="">Nilai buku: semua</option><option value="0" ${F.nb==='0'?'selected':''}>Masih 0</option><option value="ada" ${F.nb==='ada'?'selected':''}>Sudah ada nilai</option></select>`:''}
   <div style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--lb3)">
    <span>Perolehan</span>
    <input type="date" id="fta" value="${es(F.tglA)}" style="width:auto;padding:3px 6px" title="Perolehan dari tanggal">
@@ -1103,7 +1106,7 @@ function vReg(){
    <input type="date" id="ftb" value="${es(F.tglB)}" style="width:auto;padding:3px 6px" title="Perolehan sampai tanggal">
   </div>
   <div class="seg">${['','TERSEDIA','DIPINJAM','PERBAIKAN','HILANG','DILEPAS'].map(s=>`<div class="${F.stat===s?'on':''}" data-st="${s}">${s?ST[s][1]:'Semua'}</div>`).join('')}</div>
-  ${(F.dept||F.kat||F.kond||F.cara||F.lok.length||F.link||F.cetak||F.tempel||F.stat||F.tglA||F.tglB||F.q)?`<button class="b s" id="fclr" title="Bersihkan semua filter">${ic('x')}Bersihkan filter</button>`:''}
+  ${(F.dept||F.kat||F.kond||F.cara||F.lok.length||F.link||F.cetak||F.tempel||F.nb||F.stat||F.tglA||F.tglB||F.q)?`<button class="b s" id="fclr" title="Bersihkan semua filter">${ic('x')}Bersihkan filter</button>`:''}
   <div style="flex:1"></div>
   <div style="position:relative;display:inline-block">
    <button class="b s" id="fkolBtn" style="width:auto" type="button">${ic('list')}Kolom <span style="opacity:.5;margin-left:2px">▾</span></button>
@@ -2599,8 +2602,9 @@ function bind(){
  {const e=$('#ftb');if(e)e.onchange=()=>{F.tglB=e.value;render()}}
  {const e=$('#fpc');if(e)e.onchange=()=>{F.cetak=e.value;render()}}
  {const e=$('#fpt');if(e)e.onchange=()=>{F.tempel=e.value;render()}}
+ {const e=$('#fnb');if(e)e.onchange=()=>{F.nb=e.value;render()}}
  {const e=$('#fclr');if(e)e.onclick=()=>{
-   F.dept='';F.kat='';F.kond='';F.cara='';F.lok=[];F.link='';F.cetak='';F.tempel='';F.stat='';F.tglA='';F.tglB='';F.q='';LOK_FILTER_OPEN=false;
+   F.dept='';F.kat='';F.kond='';F.cara='';F.lok=[];F.link='';F.cetak='';F.tempel='';F.nb='';F.stat='';F.tglA='';F.tglB='';F.q='';LOK_FILTER_OPEN=false;
    const g=$('#gs');if(g)g.value='';
    toast('Filter dibersihkan','g');render()}}
  $$('[data-lk]').forEach(e=>e.onclick=v=>{v.stopPropagation();editLink(e.dataset.lk)});
