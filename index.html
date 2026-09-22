@@ -1117,6 +1117,7 @@ function vReg(){
   </div>
   ${can('impor')?`<button class="b s" id="imp">${ic('up')}Impor CSV</button>`:''}
   <button class="b s" id="exp">${ic('dl')}Ekspor CSV</button>
+  ${can('lihatFin')?`<button class="b s" id="expAcc" title="Format siap import ke Accurate Fixed Asset">${ic('dl')}Ekspor untuk Accurate</button>`:''}
  </div>
  ${SEL.size?`<div class="cd" style="margin-bottom:12px;background:var(--nvy)"><div class="cdb" style="padding:9px 13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">
   <span style="color:#fff;font-size:12.5px;font-weight:500">${SEL.size} dipilih</span>
@@ -2044,6 +2045,54 @@ function expCsv(){
  log('EKSPOR','ASET','—',`Registri diekspor — ${DB.aset.length} baris`);toast('CSV diunduh','g');
 }
 
+/* Peta kategori aset kita -> kelompok akun aset tetap di Accurate (COA).
+   Accurate cuma punya 4 kelompok aset tetap (Kendaraan/Peralatan/Inventaris
+   Kantor/Gedung), jauh lebih sedikit dari 13 kategori kita — jadi harus
+   dikelompokkan. Disepakati bareng pemilik akun 2026-09-22. */
+const AKUN_ASET_TETAP={
+ VHC:{n:'Kendaraan',aset:'120003',akum:'12000602',beban:'600022'},
+ AUD:{n:'Peralatan',aset:'120004',akum:'12000603',beban:'600023'},
+ ETK:{n:'Peralatan',aset:'120004',akum:'12000603',beban:'600023'},
+ CAM:{n:'Peralatan',aset:'120004',akum:'12000603',beban:'600023'},
+ LNS:{n:'Peralatan',aset:'120004',akum:'12000603',beban:'600023'},
+ LGT:{n:'Peralatan',aset:'120004',akum:'12000603',beban:'600023'},
+ MIC:{n:'Peralatan',aset:'120004',akum:'12000603',beban:'600023'},
+ STD:{n:'Peralatan',aset:'120004',akum:'12000603',beban:'600023'},
+ TPD:{n:'Peralatan',aset:'120004',akum:'12000603',beban:'600023'},
+ FUR:{n:'Inventaris Kantor',aset:'120005',akum:'12000604',beban:'600024'},
+ HP:{n:'Inventaris Kantor',aset:'120005',akum:'12000604',beban:'600024'},
+ CPU:{n:'Inventaris Kantor',aset:'120005',akum:'12000604',beban:'600024'},
+ PRN:{n:'Inventaris Kantor',aset:'120005',akum:'12000604',beban:'600024'},
+};
+const KODE_AKUN_SALDO_AWAL='300001'; // Equitas Saldo Awal
+function ddmmyyyy(d){const v=keTgl(d);if(!v)return'';const p=n=>String(n).padStart(2,'0');return`${p(v.getDate())}/${p(v.getMonth()+1)}/${v.getFullYear()}`}
+function expAccurate(){
+ const layak=DB.aset.filter(x=>x.stat!=='DILEPAS'&&x.harga>0);
+ const tanpaAkun=layak.filter(x=>!AKUN_ASET_TETAP[x.kat]);
+ if(tanpaAkun.length){
+  toast(`${tanpaAkun.length} aset dilewati — kategori belum punya pemetaan akun: ${[...new Set(tanpaAkun.map(x=>kn(x.kat)))].join(', ')}`,'r');
+ }
+ const siap=layak.filter(x=>AKUN_ASET_TETAP[x.kat]);
+ const head=['Kategori Aset','Kode Aset','Nama','Kuantitas','Umur Aset Bulan','Umur Aset Tahun','Tanggal Beli','Tanggal Pakai','Metode Penyusutan','Jumlah','Aset Tidak Berwujud','Kode #','Akun Aset','Akun Akumulasi Penyusutan','Akun Beban Penyusutan','Pajak','Kategori Pajak','Catatan','Nilai Sisa','Lokasi Aset','Cabang','Departemen'];
+ const rows=[head];
+ siap.forEach(x=>{
+  const ak=AKUN_ASET_TETAP[x.kat];
+  rows.push([
+   ak.n, x.kode, x.nama, 1,
+   x.umur%12, Math.floor(x.umur/12),
+   ddmmyyyy(x.tgl), ddmmyyyy(x.tgl),
+   'STRAIGHTLINE', x.harga, 'No',
+   KODE_AKUN_SALDO_AWAL, ak.aset, ak.akum, ak.beban,
+   'No', '', x.catatan||'', x.residu||0, ln(x.lok), '', dn(x.dept)
+  ]);
+ });
+ const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+ const b=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(b),a=document.createElement('a');
+ a.href=u;a.download='import-fixed-asset-accurate.csv';a.click();URL.revokeObjectURL(u);
+ log('EKSPOR','ASET','—',`Ekspor fixed asset untuk Accurate — ${siap.length} baris${tanpaAkun.length?`, ${tanpaAkun.length} dilewati`:''}`);
+ toast(`Diunduh — ${siap.length} aset siap diimpor ke Accurate`,'g');
+}
+
 /* ═══════ PELEPASAN ASET ═══════ */
 function lepasAset(k){
  if(!can('lepas'))return toast('Peran '+PERAN[USER.peran].n+' tidak boleh melepas aset','r');
@@ -2660,7 +2709,7 @@ function bind(){
  const df=$('#doFin');if(df)df.onclick=()=>doFin(df.dataset.k);
  $$('[data-peran]').forEach(e=>e.onclick=()=>{USER.peran=e.dataset.peran;
   log('UBAH','KONFIG','peran','Peran diubah ke '+PERAN[USER.peran].n);toast('Peran: '+PERAN[USER.peran].n,'g');closeAll();render()});
- b('#exp',expCsv);b('#doP',doPinjam);b('#stO',startOpname);b('#runR',runRekon);
+ b('#exp',expCsv);b('#expAcc',expAccurate);b('#doP',doPinjam);b('#stO',startOpname);b('#runR',runRekon);
  {const rp=$('#rpQ');if(rp)rp.oninput=()=>{RP_Q=rp.value;render();$('#rpQ').focus()}}
  {const cl=$('#clO');if(cl)cl.onclick=()=>closeOpname(cl.dataset.sesi)}
  {const dc=$('#doC');if(dc)dc.onclick=()=>doCloseOpname(dc.dataset.sesi)}
