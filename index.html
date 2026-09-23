@@ -2083,7 +2083,7 @@ function expAccurate(){
    ddmmyyyy(x.tgl), ddmmyyyy(x.tgl),
    'STRAIGHTLINE', x.harga, 'No',
    KODE_AKUN_SALDO_AWAL, ak.aset, ak.akum, ak.beban,
-   'No', '', x.catatan||'', x.residu||0, ln(x.lok), '', dn(x.dept)
+   'No', '', x.catatan||'', x.residu||0, ln(x.lok), '', ''
   ]);
  });
  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
