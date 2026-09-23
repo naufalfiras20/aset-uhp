@@ -2083,7 +2083,7 @@ function expAccurate(){
    ddmmyyyy(x.tgl), ddmmyyyy(x.tgl),
    'STRAIGHTLINE', x.harga, 'No',
    KODE_AKUN_SALDO_AWAL, ak.aset, ak.akum, ak.beban,
-   'No', '', x.catatan||'', x.residu||0, ln(x.lok), '', ''
+   'No', '', [x.catatan,x.lok?'Lokasi: '+ln(x.lok):''].filter(Boolean).join(' · '), x.residu||0, '', '', ''
   ]);
  });
  const ws=XLSX.utils.aoa_to_sheet(rows);
