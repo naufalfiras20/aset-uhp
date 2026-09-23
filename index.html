@@ -350,7 +350,7 @@ align-items:center;justify-content:center}
 <input type="file" id="fup" accept="image/*" style="display:none">
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 
@@ -2086,9 +2086,11 @@ function expAccurate(){
    'No', '', x.catatan||'', x.residu||0, ln(x.lok), '', ''
   ]);
  });
- const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
- const b=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(b),a=document.createElement('a');
- a.href=u;a.download='import-fixed-asset-accurate.csv';a.click();URL.revokeObjectURL(u);
+ const ws=XLSX.utils.aoa_to_sheet(rows);
+ ws['!cols']=head.map(()=>({wch:16}));
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,'Template Import Fixed Asset');
+ XLSX.writeFile(wb,'import-fixed-asset-accurate.xlsx');
  log('EKSPOR','ASET','—',`Ekspor fixed asset untuk Accurate — ${siap.length} baris${tanpaAkun.length?`, ${tanpaAkun.length} dilewati`:''}`);
  toast(`Diunduh — ${siap.length} aset siap diimpor ke Accurate`,'g');
 }
