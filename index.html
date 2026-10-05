@@ -687,7 +687,7 @@ const capHapus=k=>terhapus(k)?' <span class="tag" style="color:var(--rd);border-
 const sisa=x=>Math.max(0,x.umur-((TODAY.getFullYear()-x.tgl.getFullYear())*12+(TODAY.getMonth()-x.tgl.getMonth())));
 function log(a,e,i,k){DB.audit.unshift({w:new Date(),u:USER.nama,a,e,i,k})}
 /* Mutasi dicatat sebagai transaksi tersendiri supaya bisa dilaporkan per periode */
-const JMUT={LOKASI:'Pindah lokasi',DEPT:'Alih departemen',PIC:'Ganti pemegang',KONDISI:'Perubahan kondisi',KELUAR:'Dipinjamkan',MASUK:'Dikembalikan'};
+const JMUT={LOKASI:'Pindah lokasi',DEPT:'Alih departemen',PIC:'Ganti pemegang',KONDISI:'Perubahan kondisi',KELUAR:'Dipinjamkan',MASUK:'Dikembalikan',PERPANJANG:'Perpanjang pinjaman'};
 function mutasi(kode,jenis,dari,ke,ket,tgl){
  if(dari===ke)return;
  DB.mutasi.unshift({id:'MT'+Date.now()+Math.random().toString(36).slice(2,6),kode,tgl:tgl||new Date(),jenis,dari:dari||'—',ke:ke||'—',oleh:USER.nama,ket:ket||''});
@@ -1160,14 +1160,14 @@ function vPinjam(){
  </div>
  <div class="g2">
   <div><div class="gh">Di luar</div><div class="cd" style="margin:0">
-  <table><thead><tr><th style="width:104px">Kode</th><th>Aset</th><th style="width:70px">Peminjam</th><th style="width:124px">Periode pinjam</th><th style="width:104px">Status</th><th style="width:68px"></th></tr></thead>
+  <table><thead><tr><th style="width:104px">Kode</th><th>Aset</th><th style="width:70px">Peminjam</th><th style="width:124px">Periode pinjam</th><th style="width:104px">Status</th><th style="width:150px"></th></tr></thead>
   <tbody>${out.length?out.map(l=>{const x=AX(l.kode),d=late(l);
    return`<tr class="ck" data-k="${l.kode}"><td class="mn">${l.kode}</td>
    <td><div class="c1">${es(x?x.nama:l.kode)}${capHapus(l.kode)}</div><div class="c2">${es(l.proy)}${l.catatan?' · '+es(l.catatan.slice(0,28))+(l.catatan.length>28?'…':''):''}</div></td>
    <td>${es(l.org)}</td>
    <td><div style="font-size:12px">${ds(l.keluar)} → ${ds(l.jt)}</div><div class="c2">${durasi(l)} hari</div></td>
    <td>${d>0?pl('r','Telat '+d+' hari'):d===0?pl('a','Hari ini'):pl('m','sisa '+(-d)+' hari')}</td>
-   <td>${can('terima')?`<button class="b s" data-ret="${l.id}">Kembali</button>`:''}</td></tr>`}).join(''):
+   <td style="white-space:nowrap">${can('pinjam')?`<button class="b s" data-ext="${l.id}" title="Perpanjang masa pinjam">Perpanjang</button> `:''}${can('terima')?`<button class="b s" data-ret="${l.id}">Kembali</button>`:''}</td></tr>`}).join(''):
    `<tr><td colspan="6"><div class="emp">${ic('check')}<b>Tidak ada gear di luar</b><span>Semua aset ada di tempat.</span></div></td></tr>`}
   </tbody></table></div></div>
   <div><div class="gh">Pinjam</div><div class="cd" style="margin:0"><div class="cdb">
@@ -1546,7 +1546,7 @@ function openAsset(k){
    ${l.catatan?`<div class="kr"><dt>Catatan</dt><dd style="text-align:right;max-width:220px;line-height:1.45">${es(l.catatan)}</dd></div>`:''}`:''}
   </div>
   <div style="display:flex;gap:6px;margin-top:8px">
-   ${l?`<button class="b s" data-ret="${l.id}">Terima pengembalian</button>`:x.stat==='TERSEDIA'?`<button class="b s p" onclick="addCart('${k}');closeAll();go('pinjam')">Pinjam gear ini</button>`:''}
+   ${l?`${can('pinjam')?`<button class="b s" data-ext="${l.id}">Perpanjang</button> `:''}<button class="b s" data-ret="${l.id}">Terima pengembalian</button>`:x.stat==='TERSEDIA'?`<button class="b s p" onclick="addCart('${k}');closeAll();go('pinjam')">Pinjam gear ini</button>`:''}
   </div></div>
   <div class="sec"><div class="sct">Data operasional</div><div class="ins">
    <div class="kr"><dt>Lokasi</dt><dd>${es(ln(x.lok))}</dd></div>
@@ -1696,6 +1696,30 @@ function retLoan(id){
   <div class="fl"><label>Kembali ke lokasi</label><select id="rL">${DB.lok.filter(o=>o.k!=='EXT').map(o=>`<option value="${o.k}" ${o.k===(l.asalLok||'GDA')?'selected':''}>${es(o.n)}</option>`).join('')}</select></div>
   <div class="fl"><label>Catatan</label><textarea class="in" id="rN" placeholder="Opsional — misal: lecet di body"></textarea></div>`,
   `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="doR" data-id="${id}">Terima</button>`);
+}
+function tglIso(d){ return new Date(d.getTime()).toISOString().slice(0,10); }
+function perpanjangLoan(id){
+ const l=DB.pinjam.find(p=>p.id===id);if(!l||!l.aktif)return;const x=A(l.kode);
+ modal('Perpanjang masa pinjam',`
+  <div class="ins" style="margin-bottom:13px"><div class="kr"><dt>Aset</dt><dd style="font-weight:500">${es(x?x.nama:l.kode)}</dd></div>
+  <div class="kr"><dt>Peminjam</dt><dd>${es(l.org)} · ${es(l.proy)}</dd></div>
+  <div class="kr"><dt>Jatuh tempo sekarang</dt><dd>${dt(l.jt)}${late(l)>0?' '+pl('r','telat '+late(l)+' hari'):''}</dd></div></div>
+  <div class="f2">
+   <div class="fl"><label>Tambah berapa hari</label><input type="number" min="1" class="in" id="xH" placeholder="misal 7"></div>
+   <div class="fl"><label>Atau jatuh tempo baru</label><input type="date" class="in" id="xT" min="${tglIso(new Date(l.jt.getTime()+864e5))}"></div>
+  </div>
+  <div class="fl"><label>Alasan perpanjangan <span style="color:var(--rd)">*</span></label><textarea class="in" id="xA" placeholder="Wajib diisi — misal: syuting diundur, klien minta tambah 3 hari"></textarea></div>`,
+  `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="doExt" data-id="${id}">Perpanjang</button>`);
+ const h=$('#xH'),t=$('#xT');
+ h.oninput=()=>{const n=parseInt(h.value,10);t.value=n>0?tglIso(new Date(l.jt.getTime()+n*864e5)):''};
+ t.oninput=()=>{if(!t.value){h.value='';return}const n=Math.round((new Date(t.value+'T00:00:00Z')-l.jt)/864e5);h.value=n>0?n:''};
+}
+async function doPerpanjang(id){
+ const t=$('#xT').value,alasan=$('#xA').value.trim();
+ if(!t)return toast('Isi tambah berapa hari atau tanggal jatuh tempo baru','r');
+ if(!alasan)return toast('Alasan perpanjangan wajib diisi','r');
+ await aksi('apiPerpanjang',id,t,alasan);
+ toast('Masa pinjam diperpanjang','g'); closeAll();
 }
 function doRet(id){
  const l=DB.pinjam.find(p=>p.id===id),x=A(l.kode);
@@ -2641,6 +2665,8 @@ function bind(){
  $$('[data-k]').forEach(e=>e.onclick=()=>openAsset(e.dataset.k));
  $$('[data-go]').forEach(e=>e.onclick=()=>go(e.dataset.go));
  $$('[data-ret]').forEach(e=>e.onclick=v=>{v.stopPropagation();retLoan(e.dataset.ret)});
+ $$('[data-ext]').forEach(e=>e.onclick=v=>{v.stopPropagation();perpanjangLoan(e.dataset.ext)});
+ {const de=$('#doExt');if(de)de.onclick=()=>doPerpanjang(de.dataset.id)}
  $$('[data-rm]').forEach(e=>e.onclick=()=>{CART=CART.filter(c=>c!==e.dataset.rm);render()});
  $$('[data-fx]').forEach(e=>e.onclick=()=>fixFinding(e.dataset.fx));
  $$('[data-t]').forEach(e=>e.onclick=()=>{RS2=e.dataset.t;render()});
@@ -3010,6 +3036,9 @@ function srv(nama, ...args) {
         const r = cekGalat(await supa.rpc('rpc_terima', { p_id_pinjam: args[0], f: args[1] }));
         return { aset: petakan(r.aset, PETA_ASET), pinjam: petakan(r.pinjam, PETA_PINJAM) };
       }
+
+      case 'apiPerpanjang':
+        return petakan(cekGalat(await supa.rpc('rpc_perpanjang_pinjam', { p_id: args[0], p_jt_baru: args[1], p_alasan: args[2] })), PETA_PINJAM);
 
       case 'apiLepas':
         return petakan(cekGalat(await supa.rpc('rpc_lepas', { p_kode: args[0], f: args[1] })), PETA_LEPAS);
