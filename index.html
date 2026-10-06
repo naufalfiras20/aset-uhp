@@ -1295,7 +1295,7 @@ function vOpname(){
   <div><div class="gh">Pindai</div><div class="cd" style="margin:0"><div class="cdb">
    <div style="border:1px dashed var(--org);border-radius:9px;padding:15px;text-align:center;background:rgba(249,125,5,.05)">
     <div style="font-size:11px;color:var(--lb3);margin-bottom:7px">Menunggu pindaian</div>
-    <div style="margin-top:8px"><button class="b s" onclick="scanKamera()" style="padding:5px 12px;font-size:11.5px">Pindai pakai kamera</button></div><input class="in" id="opI" placeholder="PRD-XXX-000" autocomplete="off" style="max-width:200px;text-align:center;font-family:ui-monospace,monospace;text-transform:uppercase;letter-spacing:.04em">
+    <div style="margin-top:8px"><button class="b s" onclick="scanKamera()" style="padding:5px 12px;font-size:11.5px">Pindai pakai kamera</button>${can('opname')?` <button class="b s" id="opMoveBtn" type="button" style="padding:5px 12px;font-size:11.5px">${ic('swap')}Pindahkan aset</button>`:''}</div><input class="in" id="opI" placeholder="PRD-XXX-000" autocomplete="off" style="max-width:200px;text-align:center;font-family:ui-monospace,monospace;text-transform:uppercase;letter-spacing:.04em">
    </div>
    ${sc.length?`<div class="fl" style="margin-top:12px"><label>Ubah kondisi aset terakhir dipindai</label>
     <select id="opKond">${Object.entries(KD).map(([kk,v])=>`<option value="${kk}" ${A(sc[0].kode).kond===kk?'selected':''}>${v[1]}</option>`).join('')}</select>
@@ -1737,6 +1737,60 @@ async function doPerpanjang(id){
  if(!alasan)return toast('Alasan perpanjangan wajib diisi','r');
  await aksi('apiPerpanjang',id,t,alasan);
  toast('Masa pinjam diperpanjang','g'); closeAll();
+}
+/* Pindah aset saat stock opname: permanen (ganti lokasi tercatat) atau sementara
+   (otomatis jadi peminjaman, jadi perlu siapa yang pegang, proyek, dan tanggal kembali). */
+function pindahSO(kode0,lokDef){
+ const p2=n=>String(n).padStart(2,'0'),n0=new Date();
+ const hariIni=n0.getFullYear()+'-'+p2(n0.getMonth()+1)+'-'+p2(n0.getDate());
+ const base=new Date(hariIni+'T00:00:00Z');
+ const bolehSem=can('pinjam');
+ modal('Pindahkan aset saat stock opname',`
+  <div class="fl"><label>Kode aset</label><input class="in" id="mvK" value="${es(kode0||'')}" placeholder="PRD-CAM-014" autocomplete="off" style="font-family:ui-monospace,monospace;text-transform:uppercase"></div>
+  <div id="mvInfo" style="font-size:12px;color:var(--lb3);margin:-4px 0 10px;min-height:16px"></div>
+  <div class="fl"><label>Pindah ke lokasi</label><select id="mvL"><option value="" disabled ${lokDef?'':'selected'}>— Pilih lokasi tujuan —</option>${DB.lok.map(o=>`<option value="${o.k}" ${o.k===lokDef?'selected':''}>${es(o.n)}</option>`).join('')}</select></div>
+  <div class="fl"><label>Jenis pemindahan</label>
+   <label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;cursor:pointer"><input type="radio" name="mvJ" value="PERMANEN" checked style="width:auto;margin-top:3px"><span><b>Permanen</b><br><span style="font-size:11.5px;color:var(--lb3)">Lokasi tercatat aset diganti untuk seterusnya.</span></span></label>
+   ${bolehSem?`<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;cursor:pointer"><input type="radio" name="mvJ" value="SEMENTARA" style="width:auto;margin-top:3px"><span><b>Sementara</b><br><span style="font-size:11.5px;color:var(--lb3)">Otomatis dicatat sebagai peminjaman (muncul di menu Peminjaman) dan harus dikembalikan.</span></span></label>`:''}
+  </div>
+  <div id="mvSem" style="display:none">
+   <div class="f2"><div class="fl"><label>Dipegang oleh</label><select id="mvO">${DB.org.map(o=>`<option>${es(o.n)}</option>`).join('')}</select></div>
+   <div class="fl"><label>Proyek</label><select id="mvP">${DB.proy.map(o=>`<option>${es(o.n)}</option>`).join('')}</select></div></div>
+   <div class="f2"><div class="fl"><label>Tambah berapa hari</label><input type="number" min="1" class="in" id="mvH" placeholder="misal 7"></div>
+   <div class="fl"><label>Atau tanggal kembali</label><input type="date" class="in" id="mvT" min="${hariIni}"></div></div>
+   <div class="fl"><label>Catatan</label><textarea class="in" id="mvC" placeholder="Opsional — misal: dipakai syuting di Studio 21"></textarea></div>
+  </div>
+  <div id="mvSum" style="background:var(--surf2);border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.55;color:var(--lb2)"></div>`,
+  `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="doMv">Pindahkan</button>`);
+ const K=$('#mvK'),L=$('#mvL'),H=$('#mvH'),T=$('#mvT'),O=$('#mvO'),P=$('#mvP'),S=$('#mvSum');
+ const mode=()=>(document.querySelector('input[name="mvJ"]:checked')||{}).value||'PERMANEN';
+ const ref=()=>{
+  const k=K.value.trim().toUpperCase(),x=A(k);
+  $('#mvInfo').innerHTML=!k?'':x?`${es(x.nama)} · saat ini di <b>${es(ln(x.lok))}</b>`:`<span style="color:var(--rd)">Kode ${es(k)} tidak ditemukan</span>`;
+  const m=mode();$('#mvSem').style.display=m==='SEMENTARA'?'':'none';
+  const lt=L.value?ln(L.value):'…';
+  S.innerHTML=!x||!L.value?'Pilih aset dan lokasi tujuan dulu.':
+   m==='PERMANEN'?`<b>${es(x.nama)}</b> akan dipindah <b>permanen</b> dari ${es(ln(x.lok))} ke <b>${es(lt)}</b>.`:
+   `<b>${es(x.nama)}</b> akan dipindah <b>sementara</b> ke <b>${es(lt)}</b>, dipegang <b>${es(O.value||'—')}</b> untuk proyek <b>${es(P.value||'—')}</b>${T.value?`, kembali <b>${dt(new Date(T.value+'T00:00:00Z'))}</b>`:' (tanggal kembali belum diisi)'}. Otomatis masuk menu Peminjaman.`;
+ };
+ K.oninput=ref;L.onchange=ref;O.onchange=ref;P.onchange=ref;
+ document.querySelectorAll('input[name="mvJ"]').forEach(r=>r.onchange=ref);
+ H.oninput=()=>{const n=parseInt(H.value,10);T.value=n>0?new Date(base.getTime()+n*864e5).toISOString().slice(0,10):'';ref()};
+ T.oninput=()=>{if(!T.value){H.value='';ref();return}const n=Math.round((new Date(T.value+'T00:00:00Z')-base)/864e5);H.value=n>0?n:'';ref()};
+ ref();
+}
+async function doPindahSO(){
+ const k=$('#mvK').value.trim().toUpperCase(),lok=$('#mvL').value,m=(document.querySelector('input[name="mvJ"]:checked')||{}).value||'PERMANEN';
+ if(!A(k))return toast('Kode aset tidak ditemukan','r');
+ if(!lok)return toast('Pilih lokasi tujuan dulu','r');
+ const f={};
+ if(m==='SEMENTARA'){
+  f.org=$('#mvO').value;f.proy=$('#mvP').value;f.jt=$('#mvT').value;f.catatan=$('#mvC').value.trim();
+  if(!f.org)return toast('Pilih siapa yang memegang aset','r');
+  if(!f.jt)return toast('Isi tambah berapa hari atau tanggal kembali','r');
+ }
+ await aksi('apiPindahSO',k,lok,m,f);
+ toast(m==='PERMANEN'?'Aset dipindah permanen':'Aset dipindah sementara — tercatat di Peminjaman','g'); closeAll();
 }
 function doRet(id){
  const l=DB.pinjam.find(p=>p.id===id),x=A(l.kode);
@@ -2694,6 +2748,8 @@ function bind(){
  $$('[data-ret]').forEach(e=>e.onclick=v=>{v.stopPropagation();retLoan(e.dataset.ret)});
  $$('[data-ext]').forEach(e=>e.onclick=v=>{v.stopPropagation();perpanjangLoan(e.dataset.ext)});
  {const de=$('#doExt');if(de)de.onclick=()=>doPerpanjang(de.dataset.id)}
+ {const mb=$('#opMoveBtn');if(mb)mb.onclick=()=>pindahSO()}
+ {const dm=$('#doMv');if(dm)dm.onclick=()=>doPindahSO()}
  $$('[data-rm]').forEach(e=>e.onclick=()=>{CART=CART.filter(c=>c!==e.dataset.rm);render()});
  $$('[data-fx]').forEach(e=>e.onclick=()=>fixFinding(e.dataset.fx));
  $$('[data-t]').forEach(e=>e.onclick=()=>{RS2=e.dataset.t;render()});
@@ -3065,6 +3121,9 @@ function srv(nama, ...args) {
         return { aset: petakan(r.aset, PETA_ASET), pinjam: petakan(r.pinjam, PETA_PINJAM) };
       }
 
+      case 'apiPindahSO':
+        return cekGalat(await supa.rpc('rpc_opname_pindah', { p_kode: args[0], p_lok: args[1], p_mode: args[2], f: args[3] || {} }));
+
       case 'apiPerpanjang':
         return petakan(cekGalat(await supa.rpc('rpc_perpanjang_pinjam', { p_id: args[0], p_jt_baru: args[1], p_alasan: args[2] })), PETA_PINJAM);
 
@@ -3408,13 +3467,20 @@ async function startOpname(){
 async function scanOpname(k){
  const el=$('#opI');
  let r;
- try{ r=await aksi('apiPindaiOpname',k); }catch(e){ if(el){el.value='';el.focus()} return }
+ try{ r=await aksi('apiPindaiOpname',k); }catch(e){
+  if(el){el.value='';el.focus()}
+  if(/tidak ada sesi opname yang mencakup/i.test(e.message||'')&&A(k)&&can('opname')){
+   if(typeof CAMSCAN!=='undefined'&&CAMSCAN){CAMSCAN.destroy();CAMSCAN=null}
+   const o=curOpname();pindahSO(k,o&&o.lok?o.lok:'');
+  }
+  return }
  if(el)el.value='';
  if(typeof CAMSCAN!=='undefined'&&CAMSCAN){CAMSCAN.destroy();CAMSCAN=null}
  const x=A(k);
  if(!r||!x){ if(el)el.focus(); return }
  const opts=Object.entries(KD).map(([kk,v])=>`<option value="${kk}" ${x.kond===kk?'selected':''}>${v[1]}</option>`).join('');
- modal('Konfirmasi kondisi',`<p style="font-size:12.5px;color:var(--lb2);margin-bottom:12px;line-height:1.5">${es(x.nama)} (${x.kode}) — ${r.st==='DITEMUKAN'?'lokasi sesuai':'lokasi berbeda'}. Konfirmasi kondisi aset saat ini sebelum lanjut.</p><select id="opKondM" class="in" style="width:100%">${opts}</select>`,`<button class="b p" id="opKondOk">Konfirmasi & lanjut</button>`);
+ modal('Konfirmasi kondisi',`<p style="font-size:12.5px;color:var(--lb2);margin-bottom:12px;line-height:1.5">${es(x.nama)} (${x.kode}) — ${r.st==='DITEMUKAN'?'lokasi sesuai':'lokasi berbeda'}. Konfirmasi kondisi aset saat ini sebelum lanjut.</p><select id="opKondM" class="in" style="width:100%">${opts}</select>`,`<button class="b" id="opMoveM" type="button">Pindahkan aset…</button><button class="b p" id="opKondOk">Konfirmasi & lanjut</button>`);
+ const mvm=$('#opMoveM');if(mvm)mvm.onclick=()=>{closeAll();pindahSO(x.kode)};
  const ok=$('#opKondOk');
  if(ok)ok.onclick=async()=>{
   const nv=$('#opKondM').value;
