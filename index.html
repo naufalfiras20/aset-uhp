@@ -350,8 +350,37 @@ align-items:center;justify-content:center}
 <input type="file" id="fup" accept="image/*" style="display:none">
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* Kalau ada error saat booting (library gagal dimuat, browser lama, dll), tampilkan di layar
+   "Memuat data…" — dulu halaman diam macet di situ tanpa pesan apa pun, terutama di HP. */
+(function(){
+  function tampil(pesan,sumber){
+    var b=document.getElementById('boot');
+    if(!b||b.style.display==='none')return;
+    var t=document.getElementById('bootT'),e=document.getElementById('bootE');
+    if(t)t.textContent='Gagal memuat aplikasi';
+    if(e){
+      e.textContent='';
+      var p=document.createElement('div');p.textContent=pesan+(sumber?' ('+sumber+')':'');e.appendChild(p);
+      var u=document.createElement('div');u.style.cssText='margin-top:8px;font-size:10.5px;opacity:.7;word-break:break-all';
+      u.textContent=navigator.userAgent;e.appendChild(u);
+      var a=document.createElement('button');a.textContent='Coba lagi';a.style.cssText='margin-top:12px;padding:7px 16px;font-size:13px';
+      a.onclick=function(){location.reload()};e.appendChild(a);
+    }
+  }
+  window.__tampilGalatBoot=tampil;
+  window.addEventListener('error',function(ev){
+    if(ev.target&&ev.target!==window&&ev.target.src){tampil('File gagal diunduh: '+ev.target.src.split('/').pop());return}
+    tampil(ev.message||'Kesalahan tidak dikenal',(ev.filename||'').split('/').pop()+':'+(ev.lineno||'?'));
+  },true);
+  window.addEventListener('unhandledrejection',function(ev){
+    var r=ev.reason;tampil((r&&r.message)||String(r)||'Kesalahan tidak dikenal');
+  });
+})();
+</script>
+<script src="vendor/qrcode-1.0.0.min.js"></script><script src="vendor/qr-scanner-1.4.2.umd.min.js"></script><script src="vendor/xlsx-0.18.5.full.min.js"></script>
+<script src="vendor/supabase-2.117.2.min.js"></script>
+<script>if(!window.supabase)window.__tampilGalatBoot&&window.__tampilGalatBoot('Pustaka Supabase tidak termuat — periksa koneksi atau versi iOS/Safari (butuh iOS 14 ke atas)');</script>
 <script>
 
 /* ═══════ ICONS ═══════ */
