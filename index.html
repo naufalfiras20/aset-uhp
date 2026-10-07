@@ -1166,7 +1166,7 @@ function vReg(){
   </div>
   ${can('impor')?`<button class="b s" id="imp">${ic('up')}Impor CSV</button>`:''}
   <button class="b s" id="exp">${ic('dl')}Ekspor CSV</button>
-  ${can('lihatFin')?`<button class="b s" id="expAcc" title="Format siap import ke Accurate Fixed Asset">${ic('dl')}Ekspor untuk Accurate</button>`:''}
+  ${can('lihatFin')?`<button class="b s" id="expAcc" title="Centang aset di tabel dulu. Aset rusak/mengkhawatirkan otomatis tidak ikut.">${ic('dl')}Ekspor untuk Accurate${SEL.size?` (${SEL.size})`:''}</button>`:''}
  </div>
  ${SEL.size?`<div class="cd" style="margin-bottom:12px;background:var(--nvy)"><div class="cdb" style="padding:9px 13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">
   <span style="color:#fff;font-size:12.5px;font-weight:500">${SEL.size} dipilih</span>
@@ -2199,12 +2199,16 @@ const AKUN_ASET_TETAP={
 const KODE_AKUN_SALDO_AWAL='300001'; // Equitas Saldo Awal
 function ddmmyyyy(d){const v=keTgl(d);if(!v)return'';const p=n=>String(n).padStart(2,'0');return`${p(v.getDate())}/${p(v.getMonth()+1)}/${v.getFullYear()}`}
 function expAccurate(){
- const layak=DB.aset.filter(x=>x.stat!=='DILEPAS'&&x.harga>0);
+ /* Hanya aset yang dicentang di tabel Registri yang diekspor. Yang rusak / mengkhawatirkan
+    tidak ikut — jangan sampai masuk ke pembukuan Accurate sebelum diperbaiki atau dilepas. */
+ const dipilih=DB.aset.filter(x=>SEL.has(x.kode));
+ if(!dipilih.length)return toast('Centang dulu aset yang mau diekspor ke Accurate','r');
+ const rusak=dipilih.filter(x=>KOND_PERBAIKAN.includes(x.kond));
+ const layak=dipilih.filter(x=>!KOND_PERBAIKAN.includes(x.kond)&&x.stat!=='DILEPAS'&&x.harga>0);
+ const tidakLayak=dipilih.length-rusak.length-layak.length;
  const tanpaAkun=layak.filter(x=>!AKUN_ASET_TETAP[x.kat]);
- if(tanpaAkun.length){
-  toast(`${tanpaAkun.length} aset dilewati — kategori belum punya pemetaan akun: ${[...new Set(tanpaAkun.map(x=>kn(x.kat)))].join(', ')}`,'r');
- }
  const siap=layak.filter(x=>AKUN_ASET_TETAP[x.kat]);
+ if(!siap.length)return toast(`Tidak ada yang bisa diekspor dari ${dipilih.length} aset dicentang — ${rusak.length} rusak/mengkhawatirkan${tanpaAkun.length?`, ${tanpaAkun.length} kategorinya belum dipetakan ke akun`:''}${tidakLayak?`, ${tidakLayak} sudah dilepas atau tanpa harga`:''}`,'r');
  const head=['Kategori Aset','Kode Aset','Nama','Kuantitas','Umur Aset Bulan','Umur Aset Tahun','Tanggal Beli','Tanggal Pakai','Metode Penyusutan','Jumlah','Aset Tidak Berwujud','Kode #','Akun Aset','Akun Akumulasi Penyusutan','Akun Beban Penyusutan','Pajak','Kategori Pajak','Catatan','Nilai Sisa','Lokasi Aset','Cabang','Departemen'];
  const rows=[head];
  siap.forEach(x=>{
@@ -2223,8 +2227,9 @@ function expAccurate(){
  const wb=XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb,ws,'Template Import Fixed Asset');
  XLSX.writeFile(wb,'import-fixed-asset-accurate.xlsx');
- log('EKSPOR','ASET','—',`Ekspor fixed asset untuk Accurate — ${siap.length} baris${tanpaAkun.length?`, ${tanpaAkun.length} dilewati`:''}`);
- toast(`Diunduh — ${siap.length} aset siap diimpor ke Accurate`,'g');
+ const lewat=[rusak.length?`${rusak.length} rusak/mengkhawatirkan`:'',tanpaAkun.length?`${tanpaAkun.length} kategori belum dipetakan (${[...new Set(tanpaAkun.map(x=>kn(x.kat)))].join(', ')})`:'',tidakLayak?`${tidakLayak} dilepas/tanpa harga`:''].filter(Boolean);
+ log('EKSPOR','ASET','—',`Ekspor fixed asset untuk Accurate — ${siap.length} dari ${dipilih.length} dicentang${lewat.length?`; dilewati: ${lewat.join(', ')}`:''}`);
+ toast(`Diunduh — ${siap.length} aset siap diimpor ke Accurate${lewat.length?`. Dilewati: ${lewat.join(', ')}`:''}`,lewat.length?'':'g');
 }
 
 /* ═══════ PELEPASAN ASET ═══════ */
