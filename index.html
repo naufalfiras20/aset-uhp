@@ -742,7 +742,7 @@ const iso=d=>d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${S
 function toast(m,t=''){const e=document.createElement('div');e.className='ts3 '+t;e.innerHTML='<i></i>'+tr(es(m));$('#tst').appendChild(e);setTimeout(()=>{e.style.transition='.25s';e.style.opacity='0';e.style.transform='translateY(8px)';setTimeout(()=>e.remove(),260)},2700)}
 const ST={TERSEDIA:['g','Tersedia'],DIGUNAKAN:['g','Digunakan'],DIPINJAM:['a','Dipinjam'],PERBAIKAN:['b','Perbaikan'],HILANG:['r','Hilang'],DILEPAS:['m','Dilepas']};
 const JPEROLEH={BELI:'Pembelian',HIBAH:'Hibah'};
-const JLEPAS={JUAL:'Dijual',RUSAK:'Rusak permanen',HILANG:'Hilang permanen',HIBAH:'Dihibahkan',TUKAR:'Tukar tambah'};
+const JLEPAS={JUAL:'Dijual',RUSAK:'Rusak permanen',HILANG:'Hilang permanen',HIBAH:'Dihibahkan',TUKAR:'Tukar tambah',SALAH:'Salah catat / bukan aset perusahaan',LAINNYA:'Lainnya (jelaskan di keterangan)'};
 const aktifAset=()=>DB.aset.filter(x=>x.stat!=='DILEPAS');
 const garansiSisa=x=>x.garansi?dy(x.garansi,TODAY):null;
 const KD={SANGAT_BAGUS:['g','Sangat bagus'],BAGUS:['g','Bagus'],CUKUP:['a','Cukup bagus'],
@@ -1628,7 +1628,8 @@ function openAsset(k){
    <div class="kr"><dt>Tanggal</dt><dd>${dt(x.lepas.tgl)}</dd></div>
    <div class="kr"><dt>Nilai buku saat lepas</dt><dd>${rp(x.lepas.nbSaat)}</dd></div>
    <div class="kr"><dt>Hasil</dt><dd>${rp(x.lepas.nilai)}</dd></div>
-   <div class="kr"><dt>${x.lepas.selisih>=0?'Laba':'Rugi'}</dt><dd style="font-weight:600;color:${x.lepas.selisih>=0?'var(--gr)':'var(--rd)'}">${rp(Math.abs(x.lepas.selisih))}</dd></div>
+   ${x.lepas.jenis==='SALAH'?`<div class="kr"><dt>Laba/rugi</dt><dd style="color:var(--lb2)">Tidak ada — bukan aset perusahaan</dd></div>`:
+   `<div class="kr"><dt>${x.lepas.selisih>=0?'Laba':'Rugi'}</dt><dd style="font-weight:600;color:${x.lepas.selisih>=0?'var(--gr)':'var(--rd)'}">${rp(Math.abs(x.lepas.selisih))}</dd></div>`}
    <div class="kr"><dt>Oleh</dt><dd>${es(x.lepas.oleh)}</dd></div>
   </div><p style="font-size:11.5px;color:var(--lb3);margin-top:7px;line-height:1.5">${es(x.lepas.ket)}</p>
   <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
@@ -2246,17 +2247,26 @@ function lepasAset(k){
   </div>
   <div class="f2"><div class="fl"><label>Jenis pelepasan</label><select id="lJ">${Object.entries(JLEPAS).map(([kk,v])=>`<option value="${kk}">${v}</option>`).join('')}</select></div>
   <div class="fl"><label>Tanggal</label><input type="date" class="in" id="lT" value="2026-08-02"></div></div>
-  <div class="fl"><label>Nilai jual / hasil pelepasan</label><input class="in" id="lN" type="number" placeholder="0"></div>
-  <div class="fl"><label>Keterangan</label><textarea class="in" id="lK" placeholder="misal: dijual ke Bukalapak Store, nota 0012"></textarea></div>
+  <div class="fl" id="lNWrap"><label>Nilai jual / hasil pelepasan</label><input class="in" id="lN" type="number" placeholder="0"></div>
+  <div class="fl"><label>Keterangan <span style="color:var(--rd)">*</span></label><textarea class="in" id="lK" placeholder="misal: dijual ke Bukalapak Store, nota 0012"></textarea></div>
   <div id="lPrev"></div>`,
   `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="doLepas" data-k="${k}" style="background:var(--rd)">Lepas aset</button>`);
- const pv=()=>{const nJ=+$('#lN').value||0,sel=nJ-x.nb;
+ const pv=()=>{
+  const salah=$('#lJ').value==='SALAH';
+  $('#lNWrap').style.display=salah?'none':'';
+  $('#lK').placeholder=salah?'misal: ini laptop pribadi Budi, salah ikut diinput saat registrasi':'misal: dijual ke Bukalapak Store, nota 0012';
+  if(salah){
+   $('#lPrev').innerHTML=`<div class="ins" style="margin-top:4px"><div class="kr"><dt>Laba/rugi pelepasan</dt><dd style="font-weight:600">Tidak ada</dd></div></div>
+   <p style="font-size:11.5px;color:var(--lb3);margin-top:9px;line-height:1.55">Aset ini dikeluarkan dari registri karena memang bukan milik perusahaan, jadi nilai bukunya tidak dihitung sebagai rugi. Setelah itu kamu bisa menghapus permanennya lewat detail aset.</p>`;
+   return;
+  }
+  const nJ=+$('#lN').value||0,sel=nJ-x.nb;
   $('#lPrev').innerHTML=`<div class="ins" style="margin-top:4px">
    <div class="kr"><dt>Nilai buku</dt><dd>${rp(x.nb)}</dd></div>
    <div class="kr"><dt>Hasil pelepasan</dt><dd>${rp(nJ)}</dd></div>
    <div class="kr"><dt>${sel>=0?'Laba pelepasan':'Rugi pelepasan'}</dt><dd style="font-weight:600;color:${sel>0?'var(--gr)':sel<0?'var(--rd)':'var(--lb2)'}">${sel>0?'+':''}${rp(sel)}</dd></div></div>
    <p style="font-size:11.5px;color:var(--lb3);margin-top:9px;line-height:1.55">Angka laba/rugi ini catatan operasional. Jurnal pelepasannya tetap dibuat di Accurate.</p>`};
- $('#lN').oninput=pv;pv();
+ $('#lN').oninput=pv;$('#lJ').onchange=pv;pv();
 }
 function doLepas(k){
  const x=A(k),j=$('#lJ').value,t=pd($('#lT').value),nJ=+$('#lN').value||0,ket=$('#lK').value.trim();
@@ -3465,8 +3475,10 @@ doRet=async function(id){
 };
 
 doLepas=async function(k){
-  await aksi('apiLepas',k,{jenis:$('#lJ').value,tgl:$('#lT').value,
-    nilai:+$('#lN').value||0,ket:$('#lK').value.trim()});
+  const j=$('#lJ').value;
+  if(!$('#lK').value.trim())return toast('Keterangan wajib diisi','r');
+  await aksi('apiLepas',k,{jenis:j,tgl:$('#lT').value,
+    nilai:j==='SALAH'?0:(+$('#lN').value||0),ket:$('#lK').value.trim()});
   toast('Aset dilepas','g'); closeAll();
 };
 batalLepas=async function(k){
