@@ -517,8 +517,8 @@ function curOpname(){ return DB.opnameList.find(o=>o.id===DB.opnameAktif)||DB.op
 const SO_TERVERIFIKASI=['DITEMUKAN','LOKASI_BEDA'];
 function riwayatSO(kode){
  const out=[];
- DB.opnameArsip.forEach(o=>o.detail.forEach(z=>{if(z.kode===kode&&SO_TERVERIFIKASI.includes(z.st))out.push({sesi:o.nama,tgl:z.w||o.selesai,hasil:z.st,kond:z.kond,berjalan:false,pj:o.pj})}));
- DB.opnameList.forEach(o=>o.detail.forEach(z=>{if(z.kode===kode&&SO_TERVERIFIKASI.includes(z.st))out.push({sesi:o.nama,tgl:z.w||o.mulai,hasil:z.st,kond:z.kond,berjalan:true,pj:o.pj})}));
+ DB.opnameArsip.filter(o=>!o.uji).forEach(o=>o.detail.forEach(z=>{if(z.kode===kode&&SO_TERVERIFIKASI.includes(z.st))out.push({sesi:o.nama,tgl:z.w||o.selesai,hasil:z.st,kond:z.kond,berjalan:false,pj:o.pj})}));
+ DB.opnameList.filter(o=>!o.uji).forEach(o=>o.detail.forEach(z=>{if(z.kode===kode&&SO_TERVERIFIKASI.includes(z.st))out.push({sesi:o.nama,tgl:z.w||o.mulai,hasil:z.st,kond:z.kond,berjalan:true,pj:o.pj})}));
  return out.sort((a,b)=>b.tgl-a.tgl);
 }
 const HASIL_SO={DITEMUKAN:['g','Sesuai'],LOKASI_BEDA:['a','Lokasi berbeda'],TIDAK_DITEMUKAN:['r','Tidak ditemukan']};
@@ -753,6 +753,19 @@ const KOND_PERBAIKAN=['RUSAK','KRITIS'];
 const pl=(c,t)=>`<span class="pill ${c}"><i></i>${t}</span>`;
 const stx=s=>{const[c,t]=ST[s]||['m',s];return pl(c,t)};
 const kox=s=>{const[c,t]=KD[s]||['m',s];return pl(c,t)};
+/* Isi QR di label adalah kode aset. Kalau yang terbaca teks lain (mis. link yang memuat kode), cari kode terpanjang yang cocok. */
+function kodeDariScan(t){
+ t=String(t||'').trim();if(!t)return'';
+ const u=t.toUpperCase();if(A(u))return u;
+ const cocok=DB.aset.filter(a=>u.includes(a.kode.toUpperCase())).sort((p,q)=>q.kode.length-p.kode.length)[0];
+ return cocok?cocok.kode:'';
+}
+function scanRegistri(t){
+ const k=kodeDariScan(t);
+ closeAll();
+ if(!k)return toast('Kode "'+String(t).slice(0,40)+'" tidak ada di registri','r');
+ openAsset(k);
+}
 function loanOf(k){return DB.pinjam.find(l=>l.kode===k&&l.aktif)}
 const late=l=>dy(TODAY,l.jt);
 function qrText(k){const x=A(k);return x?x.kode:k}
@@ -1164,6 +1177,7 @@ function vReg(){
      ${KOL_REG.map(c=>`<label style="display:flex;align-items:center;gap:7px;padding:5px 6px;font-size:12px;cursor:pointer;border-radius:6px" onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background=''"><input type="checkbox" class="fkolChk" value="${c.k}" ${kolTampil(c.k)?'checked':''} style="width:auto;cursor:pointer"> ${es(c.l)}</label>`).join('')}
     </div>`:''}
   </div>
+  <button class="b s" id="scanReg" type="button" title="Pindai QR di label pakai kamera, langsung buka detail asetnya">${ic('scan')}Pindai QR</button>
   ${can('impor')?`<button class="b s" id="imp">${ic('up')}Impor CSV</button>`:''}
   <button class="b s" id="exp">${ic('dl')}Ekspor CSV</button>
   ${can('lihatFin')?`<button class="b s" id="expAcc" title="Centang aset di tabel dulu. Aset rusak/mengkhawatirkan otomatis tidak ikut.">${ic('dl')}Ekspor untuk Accurate${SEL.size?` (${SEL.size})`:''}</button>`:''}
@@ -1291,24 +1305,51 @@ function formBukaOpname(){
    ${DB.lok.map(l=>{const bentrok=DB.opnameList.some(o=>!o.lok||o.lok===l.k);return`<option value="${l.k}" ${bentrok?'disabled':''}>${es(l.n)} (${DB.aset.filter(x=>x.lok===l.k).length})${bentrok?' — sedang diperiksa':''}</option>`}).join('')}
    <option value="__ALL__" ${DB.opnameList.length?'disabled':''}>⚠ Semua lokasi — audit penuh (${DB.aset.length} aset)</option>
   </select></div>
+  <div class="fl"><label>Jenis sesi <span style="color:var(--rd)">*</span></label>
+   <label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:pointer"><input type="radio" name="oJ" value="SUNGGUHAN" style="width:auto;margin-top:3px"><span><b>Stock opname sungguhan</b><br><span style="font-size:11.5px;color:var(--lb3)">Hasilnya dihitung. Aset yang tidak diperiksa ditandai Hilang saat sesi ditutup.</span></span></label>
+   <label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:pointer"><input type="radio" name="oJ" value="UJI" style="width:auto;margin-top:3px"><span><b>Uji coba fitur</b><br><span style="font-size:11.5px;color:var(--lb3)">Aset asli tidak diubah sama sekali, dan tidak dihitung sebagai sudah di-SO.</span></span></label>
+  </div>
   <div id="oAllWarn" style="display:none;margin-top:2px"><div class="fl"><label style="color:var(--rd)">Ketik SEMUA untuk konfirmasi audit penuh semua lokasi sekaligus</label><input class="in" id="oAllConf" placeholder="SEMUA"></div></div>
-  <label style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:11.5px;color:var(--lb2);cursor:pointer"><input type="checkbox" id="oAck" style="margin-top:2px;width:auto">Saya sudah memastikan cakupan lokasi ini benar. Aset yang tidak diperiksa di sesi ini akan ditandai <b>Hilang</b> saat sesi ditutup nanti.</label>
+  <label id="oAckWrap" style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:11.5px;color:var(--lb2);cursor:pointer"><input type="checkbox" id="oAck" style="margin-top:2px;width:auto">Saya sudah memastikan cakupan lokasi ini benar. Aset yang tidak diperiksa di sesi ini akan ditandai <b>Hilang</b> saat sesi ditutup nanti.</label>
   <button class="b p" id="stO" disabled style="width:100%;justify-content:center;padding:6px;margin-top:10px">Buka sesi</button>
   <p style="font-size:11.5px;color:var(--lb3);margin-top:10px;line-height:1.5">Saat sesi dibuka, semua aset dalam cakupan dicatat sebagai belum diperiksa. Pemindaian mencocokkan lokasi sebenarnya dengan lokasi tercatat. Sesi lain boleh berjalan bersamaan asal cakupan lokasinya tidak tumpang tindih.</p>
  </div></div>`;
 }
+function vRiwayatSesi(){
+ const a=[...DB.opnameArsip].sort((p,q)=>q.selesai-p.selesai);
+ if(!a.length)return'';
+ const pemilik=!!(USER&&USER.pemilik);
+ return`<div class="gh" style="margin-top:18px">Riwayat sesi · ${a.length}</div>
+ <div class="cd" style="margin:0"><table>
+  <thead><tr><th>Sesi</th><th style="width:150px">Cakupan</th><th style="width:96px">Ditutup</th><th style="width:96px">Jenis</th><th style="width:170px">Hasil</th>${pemilik?'<th style="width:72px"></th>':''}</tr></thead>
+  <tbody>${a.map(o=>{const c=t=>o.detail.filter(z=>z.st===t).length;
+   return`<tr><td class="c1">${es(o.nama)}<div class="c2">${es(o.pj||'')}</div></td><td>${o.lok?es(ln(o.lok)):'Semua lokasi'}</td><td>${ds(o.selesai)}</td>
+   <td>${o.uji?pl('a','Uji coba'):pl('g','Sungguhan')}</td>
+   <td style="font-size:12px">${c('DITEMUKAN')} sesuai · ${c('LOKASI_BEDA')} beda lokasi · ${c('TIDAK_DITEMUKAN')} tidak ditemukan</td>
+   ${pemilik?`<td><button class="b s d" data-hso="${o.id}" title="Hapus riwayat sesi ini permanen">${ic('trash')}</button></td>`:''}</tr>`}).join('')}</tbody></table></div>
+ <p style="font-size:11.5px;color:var(--lb3);margin-top:9px;line-height:1.55">Sesi <b>uji coba</b> tidak dihitung sebagai sudah di-SO dan tidak muncul di laporan hasil opname.${pemilik?' Sesi yang salah bisa dihapus permanen.':''}</p>`;
+}
+function hapusSesiSO(id){
+ const o=DB.opnameArsip.find(x=>x.id===id);if(!o)return;
+ modal('Hapus riwayat sesi',`<p style="font-size:12.5px;color:var(--lb2);line-height:1.6;margin-bottom:6px">Sesi <b>${es(o.nama)}</b> (${o.uji?'uji coba':'sungguhan'}, ${o.detail.length} aset) akan dihapus permanen beserta hasilnya. Aset yang tadinya terhitung sudah di-SO lewat sesi ini kembali tercatat belum di-SO. Tidak bisa dibatalkan, tapi tercatat di log audit.</p><p style="font-size:12px;color:var(--lb3)">Status dan kondisi aset tidak ikut berubah.</p>`,
+  `<button class="b" onclick="closeAll()">Batal</button><button class="b p d" id="doHso" data-id="${id}">Hapus permanen</button>`);
+}
+async function doHapusSesiSO(id){
+ await aksi('apiHapusOpname',id);
+ toast('Riwayat sesi dihapus','g');closeAll();
+}
 function vOpname(){
  const list=DB.opnameList;
- if(!list.length||OPNAME_BUKA_BARU)return`${list.length?`<button class="b s" id="opBatalBaru" style="margin-bottom:12px">${ic('chev')} Kembali ke daftar sesi</button>`:''}${formBukaOpname()}`;
+ if(!list.length||OPNAME_BUKA_BARU)return`${list.length?`<button class="b s" id="opBatalBaru" style="margin-bottom:12px">${ic('chev')} Kembali ke daftar sesi</button>`:''}${formBukaOpname()}${list.length?'':vRiwayatSesi()}`;
  const o=curOpname();
  const d=o.detail;
  const ok=d.filter(x=>x.st==='DITEMUKAN').length,bd=d.filter(x=>x.st==='LOKASI_BEDA').length,hl=d.filter(x=>x.st==='TIDAK_DITEMUKAN').length,bm=d.filter(x=>x.st==='BELUM').length;
  const dn2=d.length-bm,sc=d.filter(x=>x.st!=='BELUM').sort((a,b)=>b.w-a.w);
  return`
- ${list.length>1?`<div class="seg" style="margin-bottom:12px">${list.map(s=>{const bm2=s.detail.filter(x=>x.st==='BELUM').length,pct=Math.round((s.detail.length-bm2)/s.detail.length*100);return`<div class="${o.id===s.id?'on':''}" data-opsel="${s.id}">${es(s.nama)} — ${s.lok?es(ln(s.lok)):'Semua lokasi'} (${pct}%)</div>`}).join('')}</div>`:''}
+ ${list.length>1?`<div class="seg" style="margin-bottom:12px">${list.map(s=>{const bm2=s.detail.filter(x=>x.st==='BELUM').length,pct=Math.round((s.detail.length-bm2)/s.detail.length*100);return`<div class="${o.id===s.id?'on':''}" data-opsel="${s.id}">${s.uji?'[UJI] ':''}${es(s.nama)} — ${s.lok?es(ln(s.lok)):'Semua lokasi'} (${pct}%)</div>`}).join('')}</div>`:''}
  <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="b s" id="opBukaBaru">${ic('plus')}Buka sesi baru</button></div>
  <div class="cd"><div class="cdh">
-  <div><div class="cdt">Opname ${es(o.nama)} — ${o.lok?es(ln(o.lok)):'Semua lokasi'}</div><div style="font-size:11px;color:var(--lb3);margin-top:1px">Dibuka ${dt(o.mulai)} · ${o.pj}</div></div>
+  <div><div class="cdt">Opname ${es(o.nama)} — ${o.lok?es(ln(o.lok)):'Semua lokasi'} ${o.uji?pl('a','UJI COBA'):''}</div><div style="font-size:11px;color:var(--lb3);margin-top:1px">Dibuka ${dt(o.mulai)} · ${o.pj}</div></div>
   <button class="b s d" id="clO" data-sesi="${o.id}">Tutup sesi</button></div><div class="cdb">
   <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--lb2)">${dn2} dari ${d.length} diperiksa</span><span style="color:var(--lb3)">${Math.round(dn2/d.length*100)}%</span></div>
   <div class="pg"><span style="width:${ok/d.length*100}%;background:var(--gr)"></span><span style="width:${bd/d.length*100}%;background:var(--org)"></span><span style="width:${hl/d.length*100}%;background:var(--rd)"></span></div>
@@ -1324,7 +1365,7 @@ function vOpname(){
   <div><div class="gh">Pindai</div><div class="cd" style="margin:0"><div class="cdb">
    <div style="border:1px dashed var(--org);border-radius:9px;padding:15px;text-align:center;background:rgba(249,125,5,.05)">
     <div style="font-size:11px;color:var(--lb3);margin-bottom:7px">Menunggu pindaian</div>
-    <div style="margin-top:8px"><button class="b s" onclick="scanKamera()" style="padding:5px 12px;font-size:11.5px">Pindai pakai kamera</button>${can('opname')?` <button class="b s" id="opMoveBtn" type="button" style="padding:5px 12px;font-size:11.5px">${ic('swap')}Pindahkan aset</button>`:''}</div><input class="in" id="opI" placeholder="PRD-XXX-000" autocomplete="off" style="max-width:200px;text-align:center;font-family:ui-monospace,monospace;text-transform:uppercase;letter-spacing:.04em">
+    <div style="margin-top:8px"><button class="b s" onclick="scanKamera()" style="padding:5px 12px;font-size:11.5px">Pindai pakai kamera</button>${can('opname')&&!o.uji?` <button class="b s" id="opMoveBtn" type="button" style="padding:5px 12px;font-size:11.5px">${ic('swap')}Pindahkan aset</button>`:''}</div><input class="in" id="opI" placeholder="PRD-XXX-000" autocomplete="off" style="max-width:200px;text-align:center;font-family:ui-monospace,monospace;text-transform:uppercase;letter-spacing:.04em">
    </div>
    ${sc.length?`<div class="fl" style="margin-top:12px"><label>Ubah kondisi aset terakhir dipindai</label>
     <select id="opKond">${Object.entries(KD).map(([kk,v])=>`<option value="${kk}" ${A(sc[0].kode).kond===kk?'selected':''}>${v[1]}</option>`).join('')}</select>
@@ -1332,7 +1373,8 @@ function vOpname(){
    <div class="sec"><div class="sct">Belum diperiksa · ${bm}</div>
    ${bm?`<div class="ins" style="max-height:180px;overflow-y:auto">${d.filter(x=>x.st==='BELUM').slice(0,10).map(s=>`<div class="kr"><dt class="mn">${s.kode}</dt><dd style="color:var(--lb3);font-size:11.5px">${es(namaAset(s.kode).slice(0,20))}</dd></div>`).join('')}</div>${bm>10?`<p style="font-size:11px;color:var(--lb3);margin-top:6px">…dan ${bm-10} lainnya</p>`:''}`:'<p style="font-size:11.5px;color:var(--gr)">Semua sudah diperiksa. Sesi siap ditutup.</p>'}</div>
   </div></div></div>
- </div>`;
+ </div>
+ ${vRiwayatSesi()}`;
 }
 
 let RS2='T1';
@@ -1845,12 +1887,12 @@ function doRet(id){
 function closeOpname(id){
  const o=DB.opnameList.find(x=>x.id===id)||curOpname();if(!o)return;
  const bm=o.detail.filter(x=>x.st==='BELUM');
- modal('Tutup sesi opname — '+es(o.nama),`<p style="font-size:12.5px;color:var(--lb2);margin-bottom:12px;line-height:1.5">${bm.length} aset belum diperiksa. Pilih status tiap aset — default tidak ditemukan (jadi hilang), atau tandai ada bila ditemukan manual (kondisinya juga bisa diperbarui).</p>
- ${bm.length?`<div class="ins" style="max-height:220px;overflow-y:auto">${bm.map(s=>{const x=A(s.kode);return`<div class="kr"><dt class="mn">${s.kode}</dt><dd style="text-align:right"><div style="font-size:11.5px;color:var(--lb3);margin-bottom:3px">${es(namaAset(s.kode).slice(0,24))}</div><select class="in" data-belum="${s.kode}" style="font-size:11.5px;padding:3px 6px;width:auto" onchange="this.nextElementSibling.style.display=this.value==='ada'?'inline-block':'none'"><option value="tidak">Tidak ditemukan</option><option value="ada">Ada</option></select><select class="in" data-kond="${s.kode}" style="font-size:11.5px;padding:3px 6px;width:auto;display:none;margin-top:4px">${Object.entries(KD).filter(([kk])=>kk!=='HILANG').map(([kk,v])=>`<option value="${kk}" ${kk===x.kond?'selected':''}>${v[1]}</option>`).join('')}</select>${can('opname')?`<button class="b s" type="button" data-mvso="${s.kode}" title="Aset ini ditemukan di lokasi lain — pindahkan" style="margin:4px 0 0 4px;padding:3px 9px;font-size:11px">Pindah…</button>`:''}</dd></div>`}).join('')}</div>`:'<p style="font-size:12.5px;color:var(--gr)">Semua aset sudah diperiksa.</p>'}`,
+ modal('Tutup sesi opname — '+es(o.nama),`${o.uji?`<div style="background:var(--surf2);border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:12px;line-height:1.5">${pl('a','UJI COBA')} Menutup sesi ini <b>tidak mengubah data aset</b> sama sekali.</div>`:''}<p style="font-size:12.5px;color:var(--lb2);margin-bottom:12px;line-height:1.5">${bm.length} aset belum diperiksa. Pilih status tiap aset — default tidak ditemukan (jadi hilang), atau tandai ada bila ditemukan manual (kondisinya juga bisa diperbarui).</p>
+ ${bm.length?`<div class="ins" style="max-height:220px;overflow-y:auto">${bm.map(s=>{const x=A(s.kode);return`<div class="kr"><dt class="mn">${s.kode}</dt><dd style="text-align:right"><div style="font-size:11.5px;color:var(--lb3);margin-bottom:3px">${es(namaAset(s.kode).slice(0,24))}</div><select class="in" data-belum="${s.kode}" style="font-size:11.5px;padding:3px 6px;width:auto" onchange="this.nextElementSibling.style.display=this.value==='ada'?'inline-block':'none'"><option value="tidak">Tidak ditemukan</option><option value="ada">Ada</option></select><select class="in" data-kond="${s.kode}" style="font-size:11.5px;padding:3px 6px;width:auto;display:none;margin-top:4px">${Object.entries(KD).filter(([kk])=>kk!=='HILANG').map(([kk,v])=>`<option value="${kk}" ${kk===x.kond?'selected':''}>${v[1]}</option>`).join('')}</select>${can('opname')&&!o.uji?`<button class="b s" type="button" data-mvso="${s.kode}" title="Aset ini ditemukan di lokasi lain — pindahkan" style="margin:4px 0 0 4px;padding:3px 9px;font-size:11px">Pindah…</button>`:''}</dd></div>`}).join('')}</div>`:'<p style="font-size:12.5px;color:var(--gr)">Semua aset sudah diperiksa.</p>'}`,
  `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="doC" data-sesi="${o.id}">Tutup sesi</button>`);
  $$('[data-mvso]').forEach(b=>b.onclick=()=>pindahSO(b.dataset.mvso,'',o.id));
 }
-let CAMSCAN=null;function scanKamera(){modal('Pindai QR',`<div style="text-align:center"><video id="camVid" style="width:100%;max-width:320px;border-radius:9px;background:#000"></video><p style="font-size:11.5px;color:var(--lb3);margin-top:8px">Arahkan kamera ke QR pada label aset</p></div>`,`<button class="b" onclick="closeAll()">Selesai</button>`);const v=$('#camVid');let last='',lastT=0;CAMSCAN=new QrScanner(v,r=>{const k=(r.data||r).trim();const now=Date.now();if(k===last&&now-lastT<1500)return;last=k;lastT=now;scanOpname(k)},{preferredCamera:'environment',maxScansPerSecond:12,highlightScanRegion:true,highlightCodeOutline:true,
+let CAMSCAN=null;function scanKamera(cb){modal('Pindai QR',`<div style="text-align:center"><video id="camVid" style="width:100%;max-width:320px;border-radius:9px;background:#000"></video><p style="font-size:11.5px;color:var(--lb3);margin-top:8px">Arahkan kamera ke QR pada label aset</p></div>`,`<button class="b" onclick="closeAll()">Selesai</button>`);const v=$('#camVid');let last='',lastT=0;CAMSCAN=new QrScanner(v,r=>{const k=(r.data||r).trim();const now=Date.now();if(k===last&&now-lastT<1500)return;last=k;lastT=now;(cb||scanOpname)(k)},{preferredCamera:'environment',maxScansPerSecond:12,highlightScanRegion:true,highlightCodeOutline:true,
   /* Bawaan library cuma membaca kotak tengah (2/3 layar) dan mengecilkannya ke 400px — QR di stiker kecil jadi hilang.
      Baca seluruh bingkai dengan resolusi sampai 1280px. */
   calculateScanRegion:vd=>{const W=vd.videoWidth||640,H=vd.videoHeight||480,k=Math.min(1,1280/Math.max(W,H));return{x:0,y:0,width:W,height:H,downScaledWidth:Math.round(W*k),downScaledHeight:Math.round(H*k)}}});CAMSCAN.start().catch(e=>toast('Gagal buka kamera: '+e.message,'r'))}
@@ -2681,7 +2723,7 @@ const LAPORAN={
  opname:{n:'Hasil stock opname',d:'Temuan dari sesi opname yang sudah ditutup',per:true,
   kol:[{h:'Sesi',w:110},{h:'Ditutup',w:88},{h:'Kode',w:104},{h:'Aset'},{h:'Hasil',w:130}],
   f:(a,b,fil)=>{const ks=new Set(fil(DB.aset).map(x=>x.kode));const out=[];
-   DB.opnameArsip.filter(o=>dlm(o.selesai,a,b)).forEach(o=>o.detail.forEach(z=>{if(!ks.has(z.kode))return;
+   DB.opnameArsip.filter(o=>!o.uji&&dlm(o.selesai,a,b)).forEach(o=>o.detail.forEach(z=>{if(!ks.has(z.kode))return;
     out.push({c:[o.nama,ds(o.selesai),z.kode,namaAset(z.kode),
      z.st==='DITEMUKAN'?'Sesuai':z.st==='LOKASI_BEDA'?'Lokasi berbeda':'Tidak ditemukan'],
      src:{t:'opname',kode:z.kode,ref:{sesi:o.nama,ditutup:o.selesai,penanggungJawab:o.pj,...z}}})}));
@@ -2800,6 +2842,8 @@ function bind(){
  $$('[data-ext]').forEach(e=>e.onclick=v=>{v.stopPropagation();perpanjangLoan(e.dataset.ext)});
  {const de=$('#doExt');if(de)de.onclick=()=>doPerpanjang(de.dataset.id)}
  {const mb=$('#opMoveBtn');if(mb)mb.onclick=()=>pindahSO()}
+ $$('[data-hso]').forEach(b=>b.onclick=()=>hapusSesiSO(b.dataset.hso));
+ {const dh=$('#doHso');if(dh)dh.onclick=()=>doHapusSesiSO(dh.dataset.id)}
  {const dm=$('#doMv');if(dm)dm.onclick=()=>doPindahSO()}
  $$('[data-rm]').forEach(e=>e.onclick=()=>{CART=CART.filter(c=>c!==e.dataset.rm);render()});
  $$('[data-fx]').forEach(e=>e.onclick=()=>fixFinding(e.dataset.fx));
@@ -2880,7 +2924,7 @@ function bind(){
  const df=$('#doFin');if(df)df.onclick=()=>doFin(df.dataset.k);
  $$('[data-peran]').forEach(e=>e.onclick=()=>{USER.peran=e.dataset.peran;
   log('UBAH','KONFIG','peran','Peran diubah ke '+PERAN[USER.peran].n);toast('Peran: '+PERAN[USER.peran].n,'g');closeAll();render()});
- b('#exp',expCsv);b('#expAcc',expAccurate);b('#doP',doPinjam);b('#stO',startOpname);b('#runR',runRekon);
+ b('#exp',expCsv);b('#scanReg',()=>scanKamera(scanRegistri));b('#expAcc',expAccurate);b('#doP',doPinjam);b('#stO',startOpname);b('#runR',runRekon);
  {const rp=$('#rpQ');if(rp)rp.oninput=()=>{RP_Q=rp.value;render();$('#rpQ').focus()}}
  {const cl=$('#clO');if(cl)cl.onclick=()=>closeOpname(cl.dataset.sesi)}
  {const dc=$('#doC');if(dc)dc.onclick=()=>doCloseOpname(dc.dataset.sesi)}
@@ -2890,12 +2934,16 @@ function bind(){
  {const oL=$('#oL'),oAck=$('#oAck'),oAllW=$('#oAllWarn'),oAllC=$('#oAllConf'),stO=$('#stO');
   if(oL&&oAck&&stO){
    const cekOpname=()=>{
-    const semua=oL.value==='__ALL__';
+    const jenis=(document.querySelector('input[name="oJ"]:checked')||{}).value||'';
+    const uji=jenis==='UJI',semua=oL.value==='__ALL__'&&!uji;
     if(oAllW)oAllW.style.display=semua?'':'none';
+    const aw=$('#oAckWrap');if(aw)aw.style.display=uji?'none':'';
     const semuaOk=!semua||(oAllC&&oAllC.value.trim().toUpperCase()==='SEMUA');
-    stO.disabled=!(oL.value&&oAck.checked&&semuaOk);
+    stO.disabled=!(jenis&&oL.value&&(uji||oAck.checked)&&semuaOk);
+    stO.textContent=uji?'Buka sesi uji coba':'Buka sesi';
    };
    oL.onchange=cekOpname;oAck.onchange=cekOpname;if(oAllC)oAllC.oninput=cekOpname;
+   document.querySelectorAll('input[name="oJ"]').forEach(r=>r.onchange=cekOpname);
    cekOpname();
   }
  }
@@ -3172,6 +3220,9 @@ function srv(nama, ...args) {
         return { aset: petakan(r.aset, PETA_ASET), pinjam: petakan(r.pinjam, PETA_PINJAM) };
       }
 
+      case 'apiHapusOpname':
+        return cekGalat(await supa.rpc('rpc_hapus_opname', { p_sesi: args[0] }));
+
       case 'apiPindahSO':
         return cekGalat(await supa.rpc('rpc_opname_pindah', { p_kode: args[0], p_lok: args[1], p_mode: args[2], f: args[3] || {} }));
 
@@ -3322,10 +3373,10 @@ function pasangData(d){
   DB.pinjam=d.pinjam;
   DB.rawat=d.rawat;
   DB.audit=(d.audit||[]).map(l=>({w:l.waktu,u:l.pengguna,a:l.aksi,e:l.entitas,i:l.idEntitas,k:l.keterangan}));
-  DB.opnameList=(d.opnameList||[]).map(o=>({id:o.id,nama:o.nama,lok:o.lok,mulai:o.mulai,pj:o.pj,
+  DB.opnameList=(d.opnameList||[]).map(o=>({id:o.id,nama:o.nama,lok:o.lok,mulai:o.mulai,pj:o.pj,uji:!!o.uji,
     detail:(o.detail||[]).map(z=>({kode:z.kode,exp:z.lokHarusnya,st:z.st,kond:z.kond,w:z.dipindai}))}));
   if(!DB.opnameAktif||!DB.opnameList.some(o=>o.id===DB.opnameAktif))DB.opnameAktif=DB.opnameList[0]?.id||null;
-  DB.opnameArsip=(d.opnameArsip||[]).map(o=>({nama:o.nama,lok:o.lok,mulai:o.mulai,selesai:o.selesai,pj:o.pj,
+  DB.opnameArsip=(d.opnameArsip||[]).map(o=>({id:o.id,uji:!!o.uji,nama:o.nama,lok:o.lok,mulai:o.mulai,selesai:o.selesai,pj:o.pj,
     detail:(o.detail||[]).map(z=>({kode:z.kode,st:z.st,kond:z.kond,w:z.dipindai}))}));
 
   const K=d.konfig||{};
@@ -3512,7 +3563,9 @@ doPulihkanHilang=async function(k){
 async function startOpname(){
   const lokRaw=$('#oL').value;
   if(!lokRaw){toast('Pilih cakupan lokasi dulu','r');return}
-  const hasil=await aksi('apiBukaOpname',{nama:$('#oN').value.trim(),lok:lokRaw==='__ALL__'?'':lokRaw});
+  const jenis=(document.querySelector('input[name="oJ"]:checked')||{}).value;
+  if(!jenis){toast('Pilih dulu: stock opname sungguhan atau uji coba','r');return}
+  const hasil=await aksi('apiBukaOpname',{nama:$('#oN').value.trim(),lok:lokRaw==='__ALL__'?'':lokRaw,uji:jenis==='UJI'});
   if(hasil&&hasil.id)DB.opnameAktif=hasil.id;
   OPNAME_BUKA_BARU=false;
   toast('Sesi opname dibuka','g');render();
@@ -3532,7 +3585,7 @@ async function scanOpname(k){
  const x=A(k);
  if(!r||!x){ if(el)el.focus(); return }
  const opts=Object.entries(KD).map(([kk,v])=>`<option value="${kk}" ${x.kond===kk?'selected':''}>${v[1]}</option>`).join('');
- modal('Konfirmasi kondisi',`<p style="font-size:12.5px;color:var(--lb2);margin-bottom:12px;line-height:1.5">${es(x.nama)} (${x.kode}) — ${r.st==='DITEMUKAN'?'lokasi sesuai':'lokasi berbeda'}. Konfirmasi kondisi aset saat ini sebelum lanjut.</p><select id="opKondM" class="in" style="width:100%">${opts}</select>`,`<button class="b" id="opMoveM" type="button">Pindahkan aset…</button><button class="b p" id="opKondOk">Konfirmasi & lanjut</button>`);
+ modal('Konfirmasi kondisi',`<p style="font-size:12.5px;color:var(--lb2);margin-bottom:12px;line-height:1.5">${es(x.nama)} (${x.kode}) — ${r.st==='DITEMUKAN'?'lokasi sesuai':'lokasi berbeda'}. Konfirmasi kondisi aset saat ini sebelum lanjut.</p><select id="opKondM" class="in" style="width:100%">${opts}</select>`,`${(curOpname()||{}).uji?'':'<button class="b" id="opMoveM" type="button">Pindahkan aset…</button>'}<button class="b p" id="opKondOk">Konfirmasi & lanjut</button>`);
  const mvm=$('#opMoveM');if(mvm)mvm.onclick=()=>{closeAll();pindahSO(x.kode)};
  const ok=$('#opKondOk');
  if(ok)ok.onclick=async()=>{
