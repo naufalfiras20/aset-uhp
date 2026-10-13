@@ -286,6 +286,14 @@ tbody tr.ck{cursor:pointer}tbody tr.ck:hover{background:var(--surf2)}
  .cd tbody td:not([data-l]){justify-content:flex-start;text-align:left}
  .cd tbody td[data-l=""]::before{content:none}
  .cd tbody td.kosong{display:none}
+ /* Matriks jadwal tahunan tetap berupa tabel (digeser ke samping), bukan kartu. */
+ .cd table.mx{display:table}
+ .cd table.mx thead{display:table-header-group}
+ .cd table.mx tbody{display:table-row-group}
+ .cd table.mx tbody tr{display:table-row;padding:0}
+ .cd table.mx tbody td{display:table-cell;padding:9px 4px;text-align:center}
+ .cd table.mx tbody td:first-child{text-align:left;padding-left:10px;min-width:170px}
+ .cd table.mx tbody td::before{content:none}
  .sts{grid-template-columns:1fr 1fr}
  .stv{font-size:21px}
 }
@@ -1356,7 +1364,7 @@ function vRawatTahun(){
   <div style="flex:1"></div>
   <span style="font-size:11.5px;color:var(--lb3);display:flex;gap:11px;align-items:center;flex-wrap:wrap">${rwDot('selesai')} selesai ${rwDot('ini')} bulan ini ${rwDot('telat')} terlambat ${rwDot('depan')} akan datang</span></div>`;
  if(!rutin.length)return kepala+`<div class="cd" style="margin:0"><div class="emp">${ic('sync')}<b>Belum ada jadwal berulang</b><span>Buat jadwal tiap 1, 3, 6, atau 12 bulan, nanti bulan-bulannya muncul di sini.</span></div></div>`;
- return kepala+`<div class="cd" style="margin:0;overflow-x:auto"><table style="min-width:820px">
+ return kepala+`<div class="cd" style="margin:0;overflow-x:auto"><table class="mx" style="min-width:820px">
   <thead><tr><th>Aset</th>${BLN.map((b,i)=>`<th style="width:50px;text-align:center;${th===TODAY.getFullYear()&&i===TODAY.getMonth()?'color:var(--org)':''}">${b}</th>`).join('')}</tr></thead>
   <tbody>${rutin.map(r=>{const x=AX(r.kode),bul=rutinBulan(r,th),tugas={};
    DB.rawat.filter(m=>m.rutin_id===r.id).forEach(m=>{tugas[m.periode]=m});
