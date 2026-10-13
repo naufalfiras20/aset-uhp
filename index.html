@@ -1272,6 +1272,48 @@ function vRiwayatPinjam(){
  ${riw.length>50?`<p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Menampilkan 50 dari ${riw.length} riwayat. Untuk riwayat lengkap dengan filter periode, buka menu Laporan → Riwayat peminjaman.</p>`:''}`;
 }
 
+function hariIniIso(){const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
+function daftarVendor(){
+ const m=new Map();
+ [...DB.rawat].sort((a,b)=>b.jadwal-a.jadwal).forEach(r=>{const n=(r.vendor||'').trim();if(n&&n!=='Belum ditentukan'&&!m.has(n.toLowerCase()))m.set(n.toLowerCase(),{nama:n,hp:r.vendorhp||'',alamat:r.vendoralamat||''})});
+ return [...m.values()];
+}
+function formRawat(kode0){
+ const vend=daftarVendor();
+ modal('Jadwal perawatan',`
+  <div class="sct" style="margin-bottom:6px">Vendor</div>
+  <div style="display:grid;grid-template-columns:1.2fr 1fr 1.6fr;gap:8px">
+   <div class="fl"><label>Nama vendor</label><input class="in" id="wV" list="wVL" placeholder="Nama vendor" autocomplete="off"><datalist id="wVL">${vend.map(v=>`<option value="${es(v.nama)}">`).join('')}</datalist></div>
+   <div class="fl"><label>Nomor telepon</label><input class="in" id="wH" type="tel" inputmode="tel" placeholder="08xx-xxxx-xxxx"></div>
+   <div class="fl"><label>Alamat</label><input class="in" id="wL" placeholder="Alamat vendor"></div>
+  </div>
+  <div class="fl"><label>Aset</label><select id="wK">${DB.aset.filter(x=>x.stat!=='HILANG'&&x.stat!=='DILEPAS').map(x=>`<option value="${x.kode}" ${x.kode===kode0?'selected':''}>${x.kode} — ${es(x.nama)}</option>`).join('')}</select></div>
+  <div class="f2"><div class="fl"><label>Jenis</label><select id="wJ"><option>RUTIN</option><option>PERBAIKAN</option><option>KALIBRASI</option><option>INSPEKSI</option></select></div>
+  <div class="fl"><label>Tanggal</label><input type="date" class="in" id="wT" value="${hariIniIso()}"></div></div>
+  <div class="f2"><div class="fl"><label>Perkiraan biaya</label><input type="number" class="in" id="wB" placeholder="0"></div>
+  <div class="fl"><label>Keterangan</label><input class="in" id="wE" placeholder="Servis berkala 6 bulan"></div></div>`,
+  `<button class="b" onclick="closeAll()">Batal</button><button class="b n" id="doW">Simpan</button>`);
+ /* vendor yang pernah dipakai: nomor dan alamat terisi otomatis, tetap bisa diubah */
+ $('#wV').oninput=()=>{const v=vend.find(x=>x.nama.toLowerCase()===$('#wV').value.trim().toLowerCase());if(v){if(!$('#wH').value)$('#wH').value=v.hp;if(!$('#wL').value)$('#wL').value=v.alamat}};
+ $('#doW').onclick=simpanRawat;
+}
+async function simpanRawat(){
+ const k=$('#wK').value;
+ if(!$('#wT').value)return toast('Isi tanggal perawatan','r');
+ await aksi('apiBuatRawat',{kode:k,jenis:$('#wJ').value,jadwal:$('#wT').value,vendor:$('#wV').value.trim(),vendorhp:$('#wH').value.trim(),vendoralamat:$('#wL').value.trim(),biaya:$('#wB').value,ket:$('#wE').value.trim()});
+ toast('Jadwal perawatan disimpan','g');closeAll();
+}
+function selesaiRawat(id){
+ const m=DB.rawat.find(r=>r.id===id);if(!m)return;const x=AX(m.kode);
+ modal('Perawatan selesai',`
+  <div class="ins" style="margin-bottom:13px"><div class="kr"><dt>Aset</dt><dd style="font-weight:500">${es(x?x.nama:m.kode)}</dd></div>
+  <div class="kr"><dt>Vendor</dt><dd>${es(m.vendor)}</dd></div>
+  <div class="kr"><dt>Dijadwalkan</dt><dd>${dt(m.jadwal)}</dd></div></div>
+  <div class="f2"><div class="fl"><label>Tanggal dikerjakan</label><input type="date" class="in" id="sT" value="${hariIniIso()}"></div>
+  <div class="fl"><label>Biaya sebenarnya</label><input type="number" class="in" id="sB" value="${m.biaya||''}" placeholder="0"></div></div>`,
+  `<button class="b" onclick="closeAll()">Batal</button><button class="b n" id="doSel" data-id="${id}">Tandai selesai</button>`);
+ $('#doSel').onclick=async()=>{await aksi('apiSelesaiRawat',id,{tgl:$('#sT').value,biaya:$('#sB').value});toast('Perawatan ditandai selesai','g');closeAll()};
+}
 function vRawat(){
  const r=[...DB.rawat].sort((a,b)=>(a.status==='SELESAI')-(b.status==='SELESAI')||a.jadwal-b.jadwal);
  const RS={TERJADWAL:['m','Terjadwal'],BERJALAN:['b','Berjalan'],SELESAI:['g','Selesai']};
@@ -1287,7 +1329,8 @@ function vRawat(){
  <div class="cd" style="margin:0"><table>
  <thead><tr><th style="width:108px">Kode</th><th>Aset</th><th style="width:84px">Jenis</th><th style="width:88px">Jadwal</th><th style="width:96px">Status</th><th style="width:92px" class="nu">Biaya</th><th style="width:72px"></th></tr></thead>
  <tbody>${r.map(m=>{const x=AX(m.kode),tl=m.status!=='SELESAI'&&dy(TODAY,m.jadwal)>0;
-  return`<tr><td class="mn">${m.kode}</td><td><div class="c1">${es(x?x.nama:m.kode)}${capHapus(m.kode)}</div><div class="c2">${es(m.ket)} · ${es(m.vendor)}</div></td>
+  return`<tr><td class="mn">${m.kode}</td><td><div class="c1">${es(x?x.nama:m.kode)}${capHapus(m.kode)}</div><div class="c2">${es(m.ket)}</div>
+   <div class="c2">${es(m.vendor)}${m.vendorhp?' · '+es(m.vendorhp):''}${m.vendoralamat?' · '+es(m.vendoralamat):''}</div></td>
   <td><span class="tag">${m.jenis[0]+m.jenis.slice(1).toLowerCase()}</span></td>
   <td>${tl?`<span style="color:var(--rd)">${ds(m.jadwal)}</span>`:ds(m.jadwal)}</td>
   <td>${pl(RS[m.status][0],RS[m.status][1])}</td><td class="nu">${m.biaya.toLocaleString('id-ID')}</td>
@@ -1892,10 +1935,16 @@ function closeOpname(id){
  `<button class="b" onclick="closeAll()">Batal</button><button class="b p" id="doC" data-sesi="${o.id}">Tutup sesi</button>`);
  $$('[data-mvso]').forEach(b=>b.onclick=()=>pindahSO(b.dataset.mvso,'',o.id));
 }
-let CAMSCAN=null;function scanKamera(cb){modal('Pindai QR',`<div style="text-align:center"><video id="camVid" style="width:100%;max-width:320px;border-radius:9px;background:#000"></video><p style="font-size:11.5px;color:var(--lb3);margin-top:8px">Arahkan kamera ke QR pada label aset</p></div>`,`<button class="b" onclick="closeAll()">Selesai</button>`);const v=$('#camVid');let last='',lastT=0;CAMSCAN=new QrScanner(v,r=>{const k=(r.data||r).trim();const now=Date.now();if(k===last&&now-lastT<1500)return;last=k;lastT=now;(cb||scanOpname)(k)},{preferredCamera:'environment',maxScansPerSecond:12,highlightScanRegion:true,highlightCodeOutline:true,
+let CAMSCAN=null;function scanKamera(cb){modal('Pindai QR',`<div style="text-align:center"><video id="camVid" style="width:100%;max-width:320px;border-radius:9px;background:#000"></video><p style="font-size:11.5px;color:var(--lb3);margin-top:8px">Arahkan kamera ke QR pada label aset</p></div>`,`<button class="b" id="camFlash" type="button" style="display:none">Nyalakan flash</button><button class="b" onclick="closeAll()">Selesai</button>`);const v=$('#camVid');let last='',lastT=0;CAMSCAN=new QrScanner(v,r=>{const k=(r.data||r).trim();const now=Date.now();if(k===last&&now-lastT<1500)return;last=k;lastT=now;(cb||scanOpname)(k)},{preferredCamera:'environment',maxScansPerSecond:12,highlightScanRegion:true,highlightCodeOutline:true,
   /* Bawaan library cuma membaca kotak tengah (2/3 layar) dan mengecilkannya ke 400px — QR di stiker kecil jadi hilang.
      Baca seluruh bingkai dengan resolusi sampai 1280px. */
-  calculateScanRegion:vd=>{const W=vd.videoWidth||640,H=vd.videoHeight||480,k=Math.min(1,1280/Math.max(W,H));return{x:0,y:0,width:W,height:H,downScaledWidth:Math.round(W*k),downScaledHeight:Math.round(H*k)}}});CAMSCAN.start().catch(e=>toast('Gagal buka kamera: '+e.message,'r'))}
+  calculateScanRegion:vd=>{const W=vd.videoWidth||640,H=vd.videoHeight||480,k=Math.min(1,1280/Math.max(W,H));return{x:0,y:0,width:W,height:H,downScaledWidth:Math.round(W*k),downScaledHeight:Math.round(H*k)}}});CAMSCAN.start().then(async()=>{
+  /* Flash tidak pernah menyala sendiri. Tombolnya baru muncul kalau kamera ini punya flash. */
+  const fb=$('#camFlash');if(!fb||!CAMSCAN)return;
+  try{if(!(await CAMSCAN.hasFlash()))return}catch(e){return}
+  fb.style.display='';
+  fb.onclick=async()=>{try{await CAMSCAN.toggleFlash();fb.textContent=CAMSCAN.isFlashOn()?'Matikan flash':'Nyalakan flash'}catch(e){toast('Flash tidak bisa dinyalakan di perangkat ini','r')}};
+ }).catch(e=>toast('Gagal buka kamera: '+e.message,'r'))}
 function runRekon(){
  const F2=[];let i=0;
  const aK=new Set(DB.aset.map(x=>x.kode)),cK=new Set(ACC.map(x=>x.kode));
@@ -2849,7 +2898,7 @@ function bind(){
  $$('[data-fx]').forEach(e=>e.onclick=()=>fixFinding(e.dataset.fx));
  $$('[data-t]').forEach(e=>e.onclick=()=>{RS2=e.dataset.t;render()});
  $$('[data-st]').forEach(e=>e.onclick=()=>{F.stat=e.dataset.st;render()});
- $$('[data-dn]').forEach(e=>e.onclick=()=>{const m=DB.rawat.find(r=>r.id===e.dataset.dn);m.status='SELESAI';log('UBAH','RAWAT',m.kode,`Perawatan ${namaAset(m.kode)} selesai`);toast('Perawatan ditandai selesai','g');render()});
+ $$('[data-dn]').forEach(e=>e.onclick=()=>selesaiRawat(e.dataset.dn));
  {const e=$('#fc');if(e)e.onchange=()=>{F.cara=e.value;render()}}
  {const b=$('#flkBtn');if(b)b.onclick=(e)=>{e.stopPropagation();LOK_FILTER_OPEN=!LOK_FILTER_OPEN;render()}}
  {const p=$('#flkPanel');if(p)p.onclick=e=>e.stopPropagation()}
@@ -2948,17 +2997,7 @@ function bind(){
   }
  }
  b('#finR',()=>{log('UBAH','REKON',DB.rekon.periode,`Rekonsiliasi ${DB.rekon.periode} ditandai tuntas`);toast('Rekonsiliasi ditandai tuntas','g');render()});
- b('#addW',()=>{modal('Jadwal perawatan',`
-   <div class="fl"><label>Aset</label><select id="wK">${DB.aset.filter(x=>x.stat!=='HILANG').map(x=>`<option value="${x.kode}">${x.kode} — ${es(x.nama)}</option>`).join('')}</select></div>
-   <div class="f2"><div class="fl"><label>Jenis</label><select id="wJ"><option>RUTIN</option><option>PERBAIKAN</option><option>KALIBRASI</option><option>INSPEKSI</option></select></div>
-   <div class="fl"><label>Tanggal</label><input type="date" class="in" id="wT" value="2026-08-15"></div></div>
-   <div class="f2"><div class="fl"><label>Vendor</label><input class="in" id="wV" placeholder="Nama vendor"></div>
-   <div class="fl"><label>Perkiraan biaya</label><input type="number" class="in" id="wB" placeholder="0"></div></div>
-   <div class="fl"><label>Keterangan</label><input class="in" id="wE" placeholder="Servis berkala 6 bulan"></div>`,
-   `<button class="b" onclick="closeAll()">Batal</button><button class="b n" id="doW">Simpan</button>`);
-  $('#doW').onclick=()=>{const k=$('#wK').value;
-   DB.rawat.push({id:'M'+Date.now(),kode:k,jenis:$('#wJ').value,jadwal:pd($('#wT').value),status:'TERJADWAL',vendor:$('#wV').value||'Belum ditentukan',biaya:+$('#wB').value||0,ket:$('#wE').value||'—'});
-   log('BUAT','RAWAT',k,`Jadwal perawatan untuk ${A(k).nama}`);toast('Jadwal dibuat','g');closeAll();render()}});
+ b('#addW',()=>formRawat());
  const dr=$('#doR');if(dr)dr.onclick=()=>doRet(dr.dataset.id);
  const de=$('#doE');if(de)de.onclick=()=>doEdit(de.dataset.k);
  const dm=$('#doM');if(dm)dm.onclick=()=>doMAdd(dm.dataset.set);
@@ -3219,6 +3258,12 @@ function srv(nama, ...args) {
         const r = cekGalat(await supa.rpc('rpc_terima', { p_id_pinjam: args[0], f: args[1] }));
         return { aset: petakan(r.aset, PETA_ASET), pinjam: petakan(r.pinjam, PETA_PINJAM) };
       }
+
+      case 'apiBuatRawat':
+        return cekGalat(await supa.rpc('rpc_buat_rawat', { f: args[0] }));
+
+      case 'apiSelesaiRawat':
+        return cekGalat(await supa.rpc('rpc_selesai_rawat', { p_id: args[0], f: args[1] || {} }));
 
       case 'apiHapusOpname':
         return cekGalat(await supa.rpc('rpc_hapus_opname', { p_sesi: args[0] }));
