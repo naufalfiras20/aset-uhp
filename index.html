@@ -507,7 +507,7 @@ let DB={
   {id:'M4',kode:'PRD-LNS-007',jenis:'KALIBRASI',jadwal:new Date(2026,6,28),status:'SELESAI',vendor:'Sigma Service',biaya:600000,ket:'Kalibrasi fokus'},
   {id:'M5',kode:'PRD-LNS-019',jenis:'PERBAIKAN',jadwal:new Date(2026,7,6),status:'TERJADWAL',vendor:'Tamron ID',biaya:1250000,ket:'Ring zoom seret'}
  ],
- opnameList:[],opnameAktif:null,rekon:null,audit:[],mutasi:[],opnameArsip:[],hapus:[]
+ rawatRutin:[],opnameList:[],opnameAktif:null,rekon:null,audit:[],mutasi:[],opnameArsip:[],hapus:[]
 };
 function curOpname(){ return DB.opnameList.find(o=>o.id===DB.opnameAktif)||DB.opnameList[0]||null; }
 /* Riwayat stock opname satu aset: sesi yang sudah ditutup + hasil pindai di sesi yang masih berjalan.
@@ -844,16 +844,16 @@ const DRILL={
  pinjam:()=>{const r=DB.pinjam.filter(l=>l.aktif).sort((a,b)=>a.jt-b.jt);
   return{t:'Sedang dipinjam',s:`${r.filter(l=>late(l)>0).length} di antaranya lewat jatuh tempo`,rows:r.map(l=>{const d=late(l);
    return{k:l.kode,a:namaAset(l.kode),b:`${l.org} · ${l.proy} · ${ds(l.keluar)} → ${ds(l.jt)} · ${KD[(AX(l.kode)||{kond:'BAGUS'}).kond][1].toLowerCase()}${l.catatan?' · '+l.catatan:''}`,c:d>0?pl('r','telat '+d+' hari'):d===0?pl('a','hari ini'):pl('m','sisa '+(-d)+' hari'),n:''}})}},
- rawat:()=>{const r=DB.rawat.filter(m=>m.status!=='SELESAI').sort((a,b)=>a.jadwal-b.jadwal);
-  return{t:'Perawatan aktif',s:'Jadwal yang belum selesai',rows:r.map(m=>({k:m.kode,a:namaAset(m.kode),b:`${m.ket} · ${m.vendor} · ${ds(m.jadwal)}`,c:dy(TODAY,m.jadwal)>0?pl('r','lewat jadwal'):pl('m',m.status.toLowerCase()),n:m.biaya?rp(m.biaya):''})),ft:rp(r.reduce((s,m)=>s+m.biaya,0))}},
+ rawat:()=>{const r=DB.rawat.filter(m=>m.status!=='SELESAI').sort((a,b)=>rwTempoHari(a)-rwTempoHari(b));
+  return{t:'Perawatan belum selesai',s:'Tugas yang belum dicentang',rows:r.map(m=>({k:m.kode,a:namaAset(m.kode),b:`${m.ket} · ${m.vendor} · ${rwJadwalTeks(m)}`,c:rwTelat(m)?pl('r','terlambat'):pl('m',m.status.toLowerCase()),n:m.biaya?rp(m.biaya):''})),ft:rp(r.reduce((s,m)=>s+m.biaya,0))}},
  rusak:()=>{const r=DB.aset.filter(x=>!sehat(x));
   return{t:'Aset bermasalah',s:'Kondisi rusak, mengkhawatirkan, atau hilang',rows:r.map(x=>({k:x.kode,a:x.nama,b:`${kn(x.kat)} · ${ln(x.lok)}`,c:kox(x.kond),n:rp(x.nb)})),ft:rp(r.reduce((s,y)=>s+y.nb,0))}},
  telat:()=>{const r=DB.pinjam.filter(l=>l.aktif&&late(l)>0).sort((a,b)=>late(b)-late(a));
   return{t:'Lewat jatuh tempo',s:'Gear yang belum kembali melewati tanggal rencana',rows:r.map(l=>({k:l.kode,a:namaAset(l.kode),b:`${l.org} · ${l.proy} · ${ds(l.keluar)} → ${ds(l.jt)} · ${KD[(AX(l.kode)||{kond:'BAGUS'}).kond][1].toLowerCase()}${l.catatan?' · '+l.catatan:''}`,c:pl('r','telat '+late(l)+' hari'),n:''}))}},
  siap:()=>{const r=DB.aset.filter(x=>x.stat==='TERSEDIA');
   return{t:'Siap dipinjam',s:'Aset berstatus tersedia',rows:r.map(x=>({k:x.kode,a:x.nama,b:`${kn(x.kat)} · ${ln(x.lok)}`,c:kox(x.kond),n:rp(x.nb)}))}},
- rawatTelat:()=>{const r=DB.rawat.filter(m=>m.status!=='SELESAI'&&dy(TODAY,m.jadwal)>0).sort((a,b)=>a.jadwal-b.jadwal);
-  return{t:'Perawatan terlambat',s:'Jadwal yang sudah lewat tanggal',rows:r.map(m=>({k:m.kode,a:namaAset(m.kode),b:`${m.ket} · ${m.vendor} · jadwal ${ds(m.jadwal)}`,c:pl('r','lewat '+dy(TODAY,m.jadwal)+' hari'),n:m.biaya?rp(m.biaya):''}))}}
+ rawatTelat:()=>{const r=DB.rawat.filter(rwTelat).sort((a,b)=>rwTempoHari(a)-rwTempoHari(b));
+  return{t:'Perawatan terlambat',s:'Tugas yang bulan atau tanggalnya sudah lewat',rows:r.map(m=>({k:m.kode,a:namaAset(m.kode),b:`${m.ket} · ${m.vendor} · jadwal ${rwJadwalTeks(m)}`,c:pl('r','lewat '+Math.max(1,dy(TODAY,rwTempoHari(m)))+' hari'),n:m.biaya?rp(m.biaya):''}))}}
 };
 function drillKond(kk){
  const r=aktifAset().filter(x=>x.kond===kk).sort((a,b)=>a.kode.localeCompare(b.kode));
@@ -1272,29 +1272,143 @@ function vRiwayatPinjam(){
  ${riw.length>50?`<p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Menampilkan 50 dari ${riw.length} riwayat. Untuk riwayat lengkap dengan filter periode, buka menu Laporan → Riwayat peminjaman.</p>`:''}`;
 }
 
+/* ═══════ PERAWATAN: checklist, jadwal tahunan, jadwal berulang ═══════ */
+const BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const BLN_PANJANG=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+let RW={tab:'tugas',thn:new Date().getFullYear(),status:'belum',bulan:'',q:''};
+function blnLabel(per){const [y,m]=per.split('-');return BLN[+m-1]+' '+y}
+function akhirBulan(per){const [y,m]=per.split('-').map(Number);return new Date(y,m,0,23,59,59)}
+function perIni(){const d=TODAY;return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function rwKey(m){return m.periode||new Date(m.jadwal).toISOString().slice(0,7)}
+function rwTelat(m){return m.status!=='SELESAI'&&(m.periode?akhirBulan(m.periode)<TODAY:dy(TODAY,m.jadwal)>0)}
+function rwTempoHari(m){return m.periode?akhirBulan(m.periode):m.jadwal}
+function rwJadwalTeks(m){return m.periode?blnLabel(m.periode):dt(m.jadwal)}
+function rwKode(m){return m.status==='SELESAI'?'selesai':rwTelat(m)?'telat':rwKey(m)===perIni()?'ini':'depan'}
+function rwDot(k,t){
+ const base='display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:middle;box-sizing:border-box;';
+ const st={selesai:'background:var(--gr)',telat:'background:var(--rd)',ini:'border:2.5px solid var(--org);background:var(--orgL)',depan:'border:1.5px solid var(--lb3)'}[k];
+ return`<span title="${es(t||'')}" style="${base}${st}"></span>`;
+}
+function rutinBulan(r,thn){
+ const out=[];let y=r.mulai.getUTCFullYear(),m=r.mulai.getUTCMonth();
+ for(let i=0;i<400;i++){if(y>thn)break;if(y===thn)out.push(m);m+=r.interval_bulan;while(m>11){m-=12;y++}}
+ return out;
+}
+function rutinPola(r){return`tiap ${r.interval_bulan} bulan`}
+function vendorBaris(v){return[v.vendor&&v.vendor!=='Belum ditentukan'?es(v.vendor):'<span style="color:var(--lb4)">Belum ditentukan</span>',v.vendorhp?es(v.vendorhp):'',v.vendoralamat?es(v.vendoralamat):''].filter(Boolean).join(' · ')}
+
+function vRawat(){
+ const SEMUA=DB.rawat,ak=SEMUA.filter(m=>m.status!=='SELESAI');
+ const telat=ak.filter(rwTelat),ini=ak.filter(m=>rwKey(m)===perIni());
+ const tab=(k,l)=>`<div class="${RW.tab===k?'on':''}" data-rwtab="${k}">${l}</div>`;
+ let isi='';
+ if(RW.tab==='tugas')isi=vRawatTugas();
+ else if(RW.tab==='tahun')isi=vRawatTahun();
+ else isi=vRawatRutin();
+ return`
+ <div class="sts" style="grid-template-columns:repeat(4,1fr)">
+  <div class="stc dr" data-dr="rawat"><div class="stl">${ic('wrench')}Belum selesai${cv()}</div><div class="stv">${ak.length}</div><div class="std">${ak.filter(m=>m.status==='BERJALAN').length} sedang di vendor</div></div>
+  <div class="stc"><div class="stl">${ic('clock')}Bulan ini</div><div class="stv">${ini.length}</div><div class="std">tugas ${BLN_PANJANG[TODAY.getMonth()]} yang belum dicentang</div></div>
+  <div class="stc dr" data-dr="rawatTelat"><div class="stl">${ic('alert')}Terlambat${cv()}</div><div class="stv" style="${telat.length?'color:var(--rd)':''}">${telat.length}</div><div class="std">bulan atau tanggalnya sudah lewat</div></div>
+  <div class="stc"><div class="stl">${ic('money')}Biaya selesai</div><div class="stv">${rpk(SEMUA.filter(m=>m.status==='SELESAI').reduce((s,m)=>s+m.biaya,0))}</div><div class="std">${SEMUA.filter(m=>m.status==='SELESAI').length} tugas selesai · lengkapnya di Laporan</div></div>
+ </div>
+ <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+  <div class="seg">${tab('tugas','Checklist tugas')}${tab('tahun','Jadwal tahunan')}${tab('rutin','Jadwal berulang')}</div>
+  <div style="flex:1"></div>
+  ${can('rawat')?`<button class="b s" id="addRutin">${ic('sync')}Jadwal berulang</button><button class="b n" id="addW">${ic('plus')}Perawatan sekali</button>`:''}
+ </div>
+ ${isi}
+ <p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Biaya di sini catatan operasional. Jurnalnya tetap dicatat terpisah di Accurate.</p>`;
+}
+function vRawatTugas(){
+ let r=[...DB.rawat];
+ if(RW.status==='belum')r=r.filter(m=>m.status!=='SELESAI');
+ else if(RW.status==='selesai')r=r.filter(m=>m.status==='SELESAI');
+ if(RW.bulan)r=r.filter(m=>rwKey(m)===RW.bulan);
+ if(RW.q){const q=RW.q.toLowerCase();r=r.filter(m=>(m.kode+namaAset(m.kode)+m.vendor+(m.ket||'')).toLowerCase().includes(q))}
+ r.sort((a,b)=>(a.status==='SELESAI')-(b.status==='SELESAI')||(a.status==='SELESAI'?b.pelaksanaan-a.pelaksanaan:rwTempoHari(a)-rwTempoHari(b)));
+ const bulanAda=[...new Set(DB.rawat.map(rwKey))].sort();
+ const sgb=(k,l)=>`<div class="${RW.status===k?'on':''}" data-rwst="${k}">${l}</div>`;
+ return`
+ <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+  <div class="seg">${sgb('belum','Belum selesai')}${sgb('selesai','Selesai')}${sgb('','Semua')}</div>
+  <select id="rwBln" style="width:auto"><option value="">Semua bulan</option>${bulanAda.map(k=>`<option value="${k}" ${RW.bulan===k?'selected':''}>${blnLabel(k)}</option>`).join('')}</select>
+  <input class="in" id="rwQ" value="${es(RW.q)}" placeholder="Cari aset atau vendor…" style="width:auto;max-width:230px;font-size:12px;padding:5px 9px">
+  <span style="font-size:11.5px;color:var(--lb3)">${r.length} tugas</span>
+ </div>
+ <div class="cd" style="margin:0"><table>
+ <thead><tr><th style="width:34px"></th><th>Aset</th><th style="width:84px">Jenis</th><th style="width:100px">Jadwal</th><th>Vendor</th><th style="width:96px" class="nu">Biaya</th><th style="width:44px"></th></tr></thead>
+ <tbody>${r.length?r.map(m=>{const x=AX(m.kode),tl=rwTelat(m),sel=m.status==='SELESAI';
+  return`<tr class="${sel?'':''}"><td><input type="checkbox" data-rwchk="${m.id}" ${sel?'checked':''} ${can('rawat')?'':'disabled'} style="width:auto;cursor:pointer" title="${sel?'Sudah selesai — klik untuk membatalkan':'Tandai selesai'}"></td>
+  <td><div class="c1" style="${sel?'color:var(--lb3)':''}">${es(x?x.nama:m.kode)}${capHapus(m.kode)}</div><div class="c2"><span class="mn">${m.kode}</span> · ${es(m.ket)}</div></td>
+  <td><span class="tag">${m.jenis[0]+m.jenis.slice(1).toLowerCase()}</span></td>
+  <td>${sel?`<span style="color:var(--gr)">${dt(m.pelaksanaan)}</span><div class="c2">jadwal ${es(rwJadwalTeks(m))}</div>`:tl?`<span style="color:var(--rd)">${es(rwJadwalTeks(m))}</span><div class="c2" style="color:var(--rd)">terlambat</div>`:es(rwJadwalTeks(m))}</td>
+  <td style="font-size:12px;line-height:1.4">${vendorBaris(m)}</td>
+  <td class="nu">${m.biaya?m.biaya.toLocaleString('id-ID'):'<span style="color:var(--lb4)">0</span>'}</td>
+  <td>${can('rawat')?`<button class="ibt" data-rwedit="${m.id}" title="Ubah">${ic('edit')}</button>`:''}</td></tr>`}).join(''):
+  `<tr><td colspan="7"><div class="emp">${ic('check')}<b>Tidak ada tugas</b><span>${RW.status==='belum'?'Semua perawatan sudah dicentang selesai.':'Tidak ada yang cocok dengan filter ini.'}</span></div></td></tr>`}
+ </tbody></table></div>`;
+}
+function vRawatTahun(){
+ const th=RW.thn,rutin=[...DB.rawatRutin].sort((a,b)=>(b.aktif-a.aktif)||a.kode.localeCompare(b.kode));
+ const kepala=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+  <button class="b s" data-rwthn="-1">${ic('chev').replace('<svg','<svg style="transform:rotate(180deg)"')}</button><b style="font-size:15px;min-width:48px;text-align:center">${th}</b><button class="b s" data-rwthn="1">${ic('chev')}</button>
+  <div style="flex:1"></div>
+  <span style="font-size:11.5px;color:var(--lb3);display:flex;gap:11px;align-items:center;flex-wrap:wrap">${rwDot('selesai')} selesai ${rwDot('ini')} bulan ini ${rwDot('telat')} terlambat ${rwDot('depan')} akan datang</span></div>`;
+ if(!rutin.length)return kepala+`<div class="cd" style="margin:0"><div class="emp">${ic('sync')}<b>Belum ada jadwal berulang</b><span>Buat jadwal tiap 1, 3, 6, atau 12 bulan, nanti bulan-bulannya muncul di sini.</span></div></div>`;
+ return kepala+`<div class="cd" style="margin:0;overflow-x:auto"><table style="min-width:820px">
+  <thead><tr><th>Aset</th>${BLN.map((b,i)=>`<th style="width:50px;text-align:center;${th===TODAY.getFullYear()&&i===TODAY.getMonth()?'color:var(--org)':''}">${b}</th>`).join('')}</tr></thead>
+  <tbody>${rutin.map(r=>{const x=AX(r.kode),bul=rutinBulan(r,th),tugas={};
+   DB.rawat.filter(m=>m.rutin_id===r.id).forEach(m=>{tugas[m.periode]=m});
+   return`<tr style="${r.aktif?'':'opacity:.5'}"><td><div class="c1">${es(x?x.nama:r.kode)}</div><div class="c2"><span class="mn">${r.kode}</span> · ${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())} ${rutinPola(r)}${r.aktif?'':' · nonaktif'}</div></td>
+   ${BLN.map((b,i)=>{const per=th+'-'+String(i+1).padStart(2,'0'),t=tugas[per];
+    if(t){const k=rwKode(t);return`<td style="text-align:center;cursor:pointer" data-rwedit="${t.id}">${rwDot(k,blnLabel(per)+' — '+({selesai:'selesai',telat:'terlambat',ini:'bulan ini',depan:'akan datang'})[k])}</td>`}
+    return`<td style="text-align:center">${bul.includes(i)?`<span title="Dijadwalkan ${blnLabel(per)} — tugas dibuat otomatis" style="color:var(--lb4)">${rwDot('depan')}</span>`:'<span style="color:var(--sep2)">·</span>'}</td>`}).join('')}</tr>`}).join('')}</tbody></table></div>
+  <p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Klik sebuah bulan untuk membuka tugasnya: tandai selesai, ubah vendor atau biaya.</p>`;
+}
+function vRawatRutin(){
+ const rutin=[...DB.rawatRutin].sort((a,b)=>(b.aktif-a.aktif)||a.kode.localeCompare(b.kode));
+ if(!rutin.length)return`<div class="cd" style="margin:0"><div class="emp">${ic('sync')}<b>Belum ada jadwal berulang</b><span>Contoh: servis tiap 3 bulan mulai Maret, otomatis jadi tugas Mar, Jun, Sep, Des.</span></div></div>`;
+ const th=TODAY.getFullYear();
+ return`<div class="cd" style="margin:0"><table>
+ <thead><tr><th>Aset</th><th style="width:150px">Pola</th><th style="width:190px">Bulan ${th}</th><th>Vendor</th><th style="width:96px" class="nu">Biaya</th><th style="width:70px"></th></tr></thead>
+ <tbody>${rutin.map(r=>{const x=AX(r.kode),sel=DB.rawat.filter(m=>m.rutin_id===r.id&&m.status==='SELESAI').length,tot=DB.rawat.filter(m=>m.rutin_id===r.id).length;
+  return`<tr style="${r.aktif?'':'opacity:.55'}"><td><div class="c1">${es(x?x.nama:r.kode)}</div><div class="c2"><span class="mn">${r.kode}</span> · ${es(r.ket||'')}</div></td>
+  <td>${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())}<div class="c2">${rutinPola(r)} · mulai ${blnLabel(r.mulai.getUTCFullYear()+'-'+String(r.mulai.getUTCMonth()+1).padStart(2,'0'))}</div>${r.aktif?'':'<div class="c2">nonaktif</div>'}</td>
+  <td style="font-size:12px">${rutinBulan(r,th).map(i=>BLN[i]).join(', ')||'<span style="color:var(--lb4)">—</span>'}<div class="c2">${sel} dari ${tot} tugas selesai</div></td>
+  <td style="font-size:12px;line-height:1.4">${vendorBaris(r)}</td>
+  <td class="nu">${r.biaya?r.biaya.toLocaleString('id-ID'):'<span style="color:var(--lb4)">0</span>'}</td>
+  <td>${can('rawat')?`<button class="ibt" data-rtedit="${r.id}" title="Ubah jadwal berulang">${ic('edit')}</button>`:''}</td></tr>`}).join('')}</tbody></table></div>`;
+}
+
 function hariIniIso(){const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
 function daftarVendor(){
  const m=new Map();
- [...DB.rawat].sort((a,b)=>b.jadwal-a.jadwal).forEach(r=>{const n=(r.vendor||'').trim();if(n&&n!=='Belum ditentukan'&&!m.has(n.toLowerCase()))m.set(n.toLowerCase(),{nama:n,hp:r.vendorhp||'',alamat:r.vendoralamat||''})});
+ [...DB.rawatRutin.map(r=>({vendor:r.vendor,vendorhp:r.vendorhp,vendoralamat:r.vendoralamat,jadwal:r.dicatat||0})),...DB.rawat].sort((a,b)=>b.jadwal-a.jadwal).forEach(r=>{const n=(r.vendor||'').trim();if(n&&n!=='Belum ditentukan'&&!m.has(n.toLowerCase()))m.set(n.toLowerCase(),{nama:n,hp:r.vendorhp||'',alamat:r.vendoralamat||''})});
  return [...m.values()];
 }
+function barisVendorForm(v,vend){
+ return`<div class="sct" style="margin-bottom:6px">Vendor</div>
+ <div style="display:grid;grid-template-columns:1.2fr 1fr 1.6fr;gap:8px">
+  <div class="fl"><label>Nama vendor</label><input class="in" id="wV" list="wVL" placeholder="Nama vendor" autocomplete="off" value="${es(v&&v.vendor&&v.vendor!=='Belum ditentukan'?v.vendor:'')}"><datalist id="wVL">${vend.map(x=>`<option value="${es(x.nama)}">`).join('')}</datalist></div>
+  <div class="fl"><label>Nomor telepon</label><input class="in" id="wH" type="tel" inputmode="tel" placeholder="08xx-xxxx-xxxx" value="${es(v?v.vendorhp||'':'')}"></div>
+  <div class="fl"><label>Alamat</label><input class="in" id="wL" placeholder="Alamat vendor" value="${es(v?v.vendoralamat||'':'')}"></div>
+ </div>`;
+}
+function pasangVendorAuto(vend){
+ $('#wV').oninput=()=>{const v=vend.find(x=>x.nama.toLowerCase()===$('#wV').value.trim().toLowerCase());if(v){if(!$('#wH').value)$('#wH').value=v.hp;if(!$('#wL').value)$('#wL').value=v.alamat}};
+}
+function asetOpsi(sel){return DB.aset.filter(x=>x.stat!=='HILANG'&&x.stat!=='DILEPAS').map(x=>`<option value="${x.kode}" ${x.kode===sel?'selected':''}>${x.kode} — ${es(x.nama)}</option>`).join('')}
 function formRawat(kode0){
  const vend=daftarVendor();
- modal('Jadwal perawatan',`
-  <div class="sct" style="margin-bottom:6px">Vendor</div>
-  <div style="display:grid;grid-template-columns:1.2fr 1fr 1.6fr;gap:8px">
-   <div class="fl"><label>Nama vendor</label><input class="in" id="wV" list="wVL" placeholder="Nama vendor" autocomplete="off"><datalist id="wVL">${vend.map(v=>`<option value="${es(v.nama)}">`).join('')}</datalist></div>
-   <div class="fl"><label>Nomor telepon</label><input class="in" id="wH" type="tel" inputmode="tel" placeholder="08xx-xxxx-xxxx"></div>
-   <div class="fl"><label>Alamat</label><input class="in" id="wL" placeholder="Alamat vendor"></div>
-  </div>
-  <div class="fl"><label>Aset</label><select id="wK">${DB.aset.filter(x=>x.stat!=='HILANG'&&x.stat!=='DILEPAS').map(x=>`<option value="${x.kode}" ${x.kode===kode0?'selected':''}>${x.kode} — ${es(x.nama)}</option>`).join('')}</select></div>
+ modal('Perawatan sekali',`${barisVendorForm(null,vend)}
+  <div class="fl"><label>Aset</label><select id="wK">${asetOpsi(kode0)}</select></div>
   <div class="f2"><div class="fl"><label>Jenis</label><select id="wJ"><option>RUTIN</option><option>PERBAIKAN</option><option>KALIBRASI</option><option>INSPEKSI</option></select></div>
   <div class="fl"><label>Tanggal</label><input type="date" class="in" id="wT" value="${hariIniIso()}"></div></div>
   <div class="f2"><div class="fl"><label>Perkiraan biaya</label><input type="number" class="in" id="wB" placeholder="0"></div>
   <div class="fl"><label>Keterangan</label><input class="in" id="wE" placeholder="Servis berkala 6 bulan"></div></div>`,
   `<button class="b" onclick="closeAll()">Batal</button><button class="b n" id="doW">Simpan</button>`);
- /* vendor yang pernah dipakai: nomor dan alamat terisi otomatis, tetap bisa diubah */
- $('#wV').oninput=()=>{const v=vend.find(x=>x.nama.toLowerCase()===$('#wV').value.trim().toLowerCase());if(v){if(!$('#wH').value)$('#wH').value=v.hp;if(!$('#wL').value)$('#wL').value=v.alamat}};
+ pasangVendorAuto(vend);
  $('#doW').onclick=simpanRawat;
 }
 async function simpanRawat(){
@@ -1303,40 +1417,79 @@ async function simpanRawat(){
  await aksi('apiBuatRawat',{kode:k,jenis:$('#wJ').value,jadwal:$('#wT').value,vendor:$('#wV').value.trim(),vendorhp:$('#wH').value.trim(),vendoralamat:$('#wL').value.trim(),biaya:$('#wB').value,ket:$('#wE').value.trim()});
  toast('Jadwal perawatan disimpan','g');closeAll();
 }
+function formRutin(id,kode0){
+ const r=id?DB.rawatRutin.find(x=>x.id===id):null,vend=daftarVendor();
+ const mulaiVal=r?r.mulai.getUTCFullYear()+'-'+String(r.mulai.getUTCMonth()+1).padStart(2,'0'):perIni();
+ modal(r?'Ubah jadwal berulang':'Jadwal berulang',`${barisVendorForm(r,vend)}
+  <div class="fl"><label>Aset</label><select id="rK">${asetOpsi(r?r.kode:kode0)}</select></div>
+  <div class="f2"><div class="fl"><label>Jenis</label><select id="rJ"><option ${r&&r.jenis==='RUTIN'?'selected':''}>RUTIN</option><option ${r&&r.jenis==='KALIBRASI'?'selected':''}>KALIBRASI</option><option ${r&&r.jenis==='INSPEKSI'?'selected':''}>INSPEKSI</option></select></div>
+  <div class="fl"><label>Ulang tiap</label><select id="rI">${[[1,'1 bulan (bulanan)'],[2,'2 bulan'],[3,'3 bulan'],[4,'4 bulan'],[6,'6 bulan'],[12,'12 bulan (tahunan)']].map(([n,l])=>`<option value="${n}" ${(r?r.interval_bulan:3)===n?'selected':''}>${l}</option>`).join('')}</select></div></div>
+  <div class="f2"><div class="fl"><label>Mulai bulan</label><input type="month" class="in" id="rM" value="${mulaiVal}"></div>
+  <div class="fl"><label>Biaya per perawatan</label><input type="number" class="in" id="rB" value="${r&&r.biaya?r.biaya:''}" placeholder="0"></div></div>
+  <div class="fl"><label>Keterangan</label><input class="in" id="rE" value="${es(r?r.ket:'')}" placeholder="Misal: servis dan bersih sensor"></div>
+  <div id="rPrev" style="background:var(--surf2);border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.55;color:var(--lb2)"></div>
+  ${r?`<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12px;cursor:pointer"><input type="checkbox" id="rA" ${r.aktif?'checked':''} style="width:auto">Jadwal aktif (matikan untuk berhenti membuat tugas baru)</label>
+  <p style="font-size:11px;color:var(--lb3);margin-top:6px;line-height:1.5">Kalau pola diubah, tugas yang belum dicentang mengikuti pola baru. Yang sudah selesai tetap tersimpan.</p>`:''}`,
+  `${r?`<button class="b d" id="hapusRutin" data-id="${r.id}" style="margin-right:auto">Hapus jadwal</button>`:''}<button class="b" onclick="closeAll()">Batal</button><button class="b n" id="doRt" ${r?`data-id="${r.id}"`:''}>Simpan</button>`);
+ pasangVendorAuto(vend);
+ const prev=()=>{
+  const m=$('#rM').value,n=+$('#rI').value;if(!m)return $('#rPrev').textContent='';
+  const [y,mo]=m.split('-').map(Number),fake={mulai:new Date(Date.UTC(y,mo-1,1)),interval_bulan:n},th=Math.max(y,TODAY.getFullYear());
+  const a=rutinBulan(fake,y).map(i=>BLN[i]),b=rutinBulan(fake,y+1).map(i=>BLN[i]);
+  $('#rPrev').innerHTML=`Tugas dibuat otomatis tiap ${n} bulan mulai <b>${BLN_PANJANG[mo-1]} ${y}</b>.<br>${y}: <b>${a.join(', ')||'—'}</b>${b.length?`<br>${y+1}: <b>${b.join(', ')}</b>`:''}`;
+ };
+ $('#rM').oninput=prev;$('#rI').onchange=prev;prev();
+ $('#doRt').onclick=simpanRutin;
+ const hr=$('#hapusRutin');if(hr)hr.onclick=()=>hapusRutinDlg(hr.dataset.id);
+}
+async function simpanRutin(){
+ const id=($('#doRt').dataset.id)||'';
+ if(!$('#rM').value)return toast('Pilih bulan mulai','r');
+ await aksi('apiSimpanRutin',{id,kode:$('#rK').value,jenis:$('#rJ').value,interval:$('#rI').value,mulai:$('#rM').value,vendor:$('#wV').value.trim(),vendorhp:$('#wH').value.trim(),vendoralamat:$('#wL').value.trim(),biaya:$('#rB').value,ket:$('#rE').value.trim(),aktif:id?$('#rA').checked:true});
+ toast(id?'Jadwal berulang diperbarui':'Jadwal berulang dibuat','g');closeAll();
+}
+function hapusRutinDlg(id){
+ const r=DB.rawatRutin.find(x=>x.id===id);if(!r)return;
+ const belum=DB.rawat.filter(m=>m.rutin_id===id&&m.status!=='SELESAI').length,sudah=DB.rawat.filter(m=>m.rutin_id===id&&m.status==='SELESAI').length;
+ modal('Hapus jadwal berulang',`<p style="font-size:12.5px;color:var(--lb2);line-height:1.6">Jadwal ${rutinPola(r)} untuk <b>${es(namaAset(r.kode))}</b> akan dihapus. <b>${belum} tugas yang belum dicentang</b> ikut hilang. <b>${sudah} tugas yang sudah selesai</b> tetap tersimpan dan tetap muncul di laporan.</p>`,
+  `<button class="b" onclick="closeAll()">Batal</button><button class="b p d" id="doHr" data-id="${id}">Hapus jadwal</button>`);
+ $('#doHr').onclick=async()=>{await aksi('apiHapusRutin',id);toast('Jadwal berulang dihapus','g');closeAll()};
+}
+function editRawat(id){
+ const m=DB.rawat.find(r=>r.id===id);if(!m)return;const x=AX(m.kode),vend=daftarVendor(),sel=m.status==='SELESAI',izin=can('rawat');
+ modal((sel?'Perawatan selesai':'Tugas perawatan'),`
+  <div class="ins" style="margin-bottom:13px"><div class="kr"><dt>Aset</dt><dd style="font-weight:500">${es(x?x.nama:m.kode)} <span class="mn" style="color:var(--org)">${m.kode}</span></dd></div>
+  <div class="kr"><dt>Jenis</dt><dd>${es(m.jenis[0]+m.jenis.slice(1).toLowerCase())}${m.rutin_id?' · jadwal berulang':''}</dd></div>
+  <div class="kr"><dt>Jadwal</dt><dd>${es(rwJadwalTeks(m))} ${sel?pl('g','selesai '+dt(m.pelaksanaan)):rwTelat(m)?pl('r','terlambat'):''}</dd></div></div>
+  ${barisVendorForm(m,vend)}
+  <div class="f2">${m.rutin_id?'':`<div class="fl"><label>Tanggal jadwal</label><input type="date" class="in" id="eT" value="${new Date(m.jadwal).toISOString().slice(0,10)}"></div>`}
+  ${sel?`<div class="fl"><label>Tanggal dikerjakan</label><input type="date" class="in" id="eP" value="${new Date(m.pelaksanaan).toISOString().slice(0,10)}"></div>`:''}
+  <div class="fl"><label>${sel?'Biaya sebenarnya':'Perkiraan biaya'}</label><input type="number" class="in" id="eB" value="${m.biaya||''}" placeholder="0"></div></div>
+  <div class="fl"><label>Keterangan</label><input class="in" id="eK" value="${es(m.ket==='—'?'':m.ket)}"></div>`,
+  `${izin?`${sel?`<button class="b" id="batalSel" data-id="${id}" style="margin-right:auto">Batalkan centang selesai</button>`:(m.rutin_id?'':`<button class="b d" id="hapusTugas" data-id="${id}" style="margin-right:auto">Hapus</button>`)}`:''}<button class="b" onclick="closeAll()">Tutup</button>${izin?`${sel?'':`<button class="b" id="tandaiSel" data-id="${id}">Tandai selesai…</button>`}<button class="b n" id="doEr" data-id="${id}">Simpan</button>`:''}`);
+ pasangVendorAuto(vend);
+ const d=s=>$(s);
+ if(d('#doEr'))d('#doEr').onclick=async()=>{await aksi('apiUbahRawat',id,{jadwal:d('#eT')?d('#eT').value:'',vendor:$('#wV').value.trim(),vendorhp:$('#wH').value.trim(),vendoralamat:$('#wL').value.trim(),biaya:d('#eB').value,ket:d('#eK').value.trim(),tgl:d('#eP')?d('#eP').value:''});toast('Perubahan disimpan','g');closeAll()};
+ if(d('#tandaiSel'))d('#tandaiSel').onclick=()=>selesaiRawat(id);
+ if(d('#batalSel'))d('#batalSel').onclick=()=>batalSelesaiRawat(id);
+ if(d('#hapusTugas'))d('#hapusTugas').onclick=async()=>{if(!confirm('Hapus tugas perawatan ini?'))return;await aksi('apiHapusRawat',id);toast('Tugas dihapus','g');closeAll()};
+}
+function batalSelesaiRawat(id){
+ const m=DB.rawat.find(r=>r.id===id);if(!m)return;
+ modal('Batalkan centang selesai',`<p style="font-size:12.5px;color:var(--lb2);line-height:1.6">Tugas <b>${es(namaAset(m.kode))}</b> (${es(rwJadwalTeks(m))}) kembali jadi belum selesai, dan tanggal dikerjakannya dihapus. Biaya yang sudah diisi tetap tersimpan.</p>`,
+  `<button class="b" onclick="closeAll()">Kembali</button><button class="b p" id="doBs">Ya, batalkan</button>`);
+ $('#doBs').onclick=async()=>{await aksi('apiBatalSelesaiRawat',id);toast('Centang selesai dibatalkan','g');closeAll()};
+}
 function selesaiRawat(id){
  const m=DB.rawat.find(r=>r.id===id);if(!m)return;const x=AX(m.kode);
  modal('Perawatan selesai',`
   <div class="ins" style="margin-bottom:13px"><div class="kr"><dt>Aset</dt><dd style="font-weight:500">${es(x?x.nama:m.kode)}</dd></div>
-  <div class="kr"><dt>Vendor</dt><dd>${es(m.vendor)}</dd></div>
-  <div class="kr"><dt>Dijadwalkan</dt><dd>${dt(m.jadwal)}</dd></div></div>
+  <div class="kr"><dt>Vendor</dt><dd>${vendorBaris(m)}</dd></div>
+  <div class="kr"><dt>Jadwal</dt><dd>${es(rwJadwalTeks(m))}</dd></div></div>
   <div class="f2"><div class="fl"><label>Tanggal dikerjakan</label><input type="date" class="in" id="sT" value="${hariIniIso()}"></div>
   <div class="fl"><label>Biaya sebenarnya</label><input type="number" class="in" id="sB" value="${m.biaya||''}" placeholder="0"></div></div>`,
   `<button class="b" onclick="closeAll()">Batal</button><button class="b n" id="doSel" data-id="${id}">Tandai selesai</button>`);
  $('#doSel').onclick=async()=>{await aksi('apiSelesaiRawat',id,{tgl:$('#sT').value,biaya:$('#sB').value});toast('Perawatan ditandai selesai','g');closeAll()};
-}
-function vRawat(){
- const r=[...DB.rawat].sort((a,b)=>(a.status==='SELESAI')-(b.status==='SELESAI')||a.jadwal-b.jadwal);
- const RS={TERJADWAL:['m','Terjadwal'],BERJALAN:['b','Berjalan'],SELESAI:['g','Selesai']};
- const ak=DB.rawat.filter(m=>m.status!=='SELESAI');
- return`
- <div class="sts" style="grid-template-columns:repeat(4,1fr)">
-  <div class="stc dr" data-dr="rawat"><div class="stl">${ic('wrench')}Jadwal aktif${cv()}</div><div class="stv">${ak.length}</div><div class="std">${ak.filter(m=>dy(m.jadwal,TODAY)<=7).length} jatuh tempo pekan ini</div></div>
-  <div class="stc"><div class="stl">${ic('box')}Di vendor</div><div class="stv">${DB.rawat.filter(m=>m.status==='BERJALAN').length}</div><div class="std">aset tidak bisa dipakai</div></div>
-  <div class="stc dr" data-dr="rawatTelat"><div class="stl">${ic('alert')}Terlambat${cv()}</div><div class="stv" style="${ak.filter(m=>dy(TODAY,m.jadwal)>0).length?'color:var(--rd)':''}">${ak.filter(m=>dy(TODAY,m.jadwal)>0).length}</div><div class="std">lewat tanggal jadwal</div></div>
-  <div class="stc"><div class="stl">${ic('money')}Biaya selesai</div><div class="stv">${rpk(DB.rawat.filter(m=>m.status==='SELESAI').reduce((s,m)=>s+m.biaya,0))}</div><div class="std">catatan operasional</div></div>
- </div>
- <div style="display:flex;justify-content:flex-end;margin-bottom:11px"><button class="b n" id="addW">${ic('plus')}Jadwal perawatan</button></div>
- <div class="cd" style="margin:0"><table>
- <thead><tr><th style="width:108px">Kode</th><th>Aset</th><th style="width:84px">Jenis</th><th style="width:88px">Jadwal</th><th style="width:96px">Status</th><th style="width:92px" class="nu">Biaya</th><th style="width:72px"></th></tr></thead>
- <tbody>${r.map(m=>{const x=AX(m.kode),tl=m.status!=='SELESAI'&&dy(TODAY,m.jadwal)>0;
-  return`<tr><td class="mn">${m.kode}</td><td><div class="c1">${es(x?x.nama:m.kode)}${capHapus(m.kode)}</div><div class="c2">${es(m.ket)}</div>
-   <div class="c2">${es(m.vendor)}${m.vendorhp?' · '+es(m.vendorhp):''}${m.vendoralamat?' · '+es(m.vendoralamat):''}</div></td>
-  <td><span class="tag">${m.jenis[0]+m.jenis.slice(1).toLowerCase()}</span></td>
-  <td>${tl?`<span style="color:var(--rd)">${ds(m.jadwal)}</span>`:ds(m.jadwal)}</td>
-  <td>${pl(RS[m.status][0],RS[m.status][1])}</td><td class="nu">${m.biaya.toLocaleString('id-ID')}</td>
-  <td>${m.status!=='SELESAI'?`<button class="b s" data-dn="${m.id}">Selesai</button>`:''}</td></tr>`}).join('')}
- </tbody></table></div>
- <p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Biaya di sini catatan operasional. Jurnalnya tetap dicatat terpisah di Accurate.</p>`;
 }
 
 let OPNAME_BUKA_BARU=false;
@@ -1726,6 +1879,13 @@ function openAsset(k){
    <p style="font-size:11.5px;color:var(--lb3);margin-bottom:8px;line-height:1.5">Aset ini tercatat hilang. Kalau ketemu lagi, pulihkan statusnya di sini — wajib isi kondisi terkini dan alasan pemulihan.</p>
    <button class="b s" style="width:100%;justify-content:center" onclick="pulihkanHilang('${k}')">${ic('check')}Pulihkan dari status hilang</button>
   </div>`:''}
+  ${(()=>{
+   const rt=DB.rawatRutin.filter(r=>r.kode===k),tg=DB.rawat.filter(m=>m.kode===k),buka=tg.filter(m=>m.status!=='SELESAI').sort((a,b)=>rwTempoHari(a)-rwTempoHari(b)),sudah=tg.filter(m=>m.status==='SELESAI').sort((a,b)=>b.pelaksanaan-a.pelaksanaan);
+   return`<div class="sec"><div class="sct">Perawatan</div>
+   ${rt.length?rt.map(r=>`<div style="font-size:12.5px;margin-bottom:6px"><b>${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())} ${rutinPola(r)}</b> · bulan ${rutinBulan(r,TODAY.getFullYear()).map(i=>BLN[i]).join(', ')||'—'}${r.aktif?'':' · nonaktif'}<div style="font-size:11.5px;color:var(--lb3)">${vendorBaris(r)}</div></div>`).join(''):`<div style="font-size:12.5px;color:var(--lb3);margin-bottom:6px">Belum ada jadwal perawatan berulang.</div>`}
+   ${buka.length?`<div class="ins">${buka.slice(0,4).map(m=>`<div class="kr"><dt>${es(rwJadwalTeks(m))}</dt><dd style="text-align:right">${es(m.jenis[0]+m.jenis.slice(1).toLowerCase())} ${rwTelat(m)?pl('r','terlambat'):pl('m','belum')}</dd></div>`).join('')}</div>`:''}
+   ${sudah.length?`<div style="font-size:11.5px;color:var(--lb3);margin-top:6px">${sudah.length}× sudah dirawat · terakhir <b>${dt(sudah[0].pelaksanaan)}</b></div>`:''}
+   ${can('rawat')?`<button class="b s" style="margin-top:8px" data-rtbaru="${k}">${ic('sync')}Jadwal berulang</button>`:''}</div>`})()}
   ${(()=>{const so=riwayatSO(k);return`<div class="sec"><div class="sct">Stock opname</div>
    ${so.length?`<div style="margin-bottom:8px;font-size:12.5px;color:var(--lb1)">Sudah <b>${so.length}×</b> di-SO · terakhir <b>${dt(so[0].tgl)}</b> ${pl(HASIL_SO[so[0].hasil][0],HASIL_SO[so[0].hasil][1])}</div>
    <div class="ins">${so.slice(0,8).map(h=>`<div class="kr"><dt>${dt(h.tgl)}</dt><dd style="text-align:right">${es(h.sesi)}${h.berjalan?' <span style="color:var(--lb3)">(berjalan)</span>':''} · ${pl(HASIL_SO[h.hasil][0],HASIL_SO[h.hasil][1])}</dd></div>`).join('')}</div>
@@ -2766,8 +2926,15 @@ const LAPORAN={
   kol:[{h:'Jadwal',w:88},{h:'Kode',w:104},{h:'Aset'},{h:'Jenis',w:96},{h:'Vendor',w:120},{h:'Status',w:88},{h:'Biaya',w:104,nu:1}],
   f:(a,b,fil)=>{const ks=new Set(fil(DB.aset).map(x=>x.kode));
    return DB.rawat.filter(m=>ks.has(m.kode)&&dlm(m.jadwal,a,b)).sort((p,q)=>p.jadwal-q.jadwal)
-    .map(m=>({c:[ds(m.jadwal),m.kode,namaAset(m.kode)+'|'+m.ket,m.jenis[0]+m.jenis.slice(1).toLowerCase(),m.vendor,
+    .map(m=>({c:[rwJadwalTeks(m),m.kode,namaAset(m.kode)+'|'+m.ket,m.jenis[0]+m.jenis.slice(1).toLowerCase(),m.vendor,
      m.status[0]+m.status.slice(1).toLowerCase(),m.biaya],src:{t:'rawat',kode:m.kode,ref:m}}))},
+  tot:[6]},
+ rawatselesai:{n:'Perawatan selesai',d:'Perawatan yang sudah dicentang selesai, menurut tanggal dikerjakan, lengkap dengan vendor dan biaya sebenarnya',per:true,
+  kol:[{h:'Dikerjakan',w:96},{h:'Kode',w:104},{h:'Aset'},{h:'Jenis',w:88},{h:'Vendor'},{h:'Telepon',w:120},{h:'Biaya',w:104,nu:1}],
+  f:(a,b,fil)=>{const ks=new Set(fil(DB.aset).map(x=>x.kode));
+   return DB.rawat.filter(m=>m.status==='SELESAI'&&m.pelaksanaan&&ks.has(m.kode)&&dlm(m.pelaksanaan,a,b)).sort((p,q)=>p.pelaksanaan-q.pelaksanaan)
+    .map(m=>({c:[ds(m.pelaksanaan),m.kode,namaAset(m.kode)+'|'+m.ket+' · jadwal '+rwJadwalTeks(m),m.jenis[0]+m.jenis.slice(1).toLowerCase(),
+     (m.vendor||'')+'|'+(m.vendoralamat||''),m.vendorhp||'—',m.biaya],src:{t:'rawat',kode:m.kode,ref:m}}))},
   tot:[6]},
  opname:{n:'Hasil stock opname',d:'Temuan dari sesi opname yang sudah ditutup',per:true,
   kol:[{h:'Sesi',w:110},{h:'Ditutup',w:88},{h:'Kode',w:104},{h:'Aset'},{h:'Hasil',w:130}],
@@ -2998,6 +3165,16 @@ function bind(){
  }
  b('#finR',()=>{log('UBAH','REKON',DB.rekon.periode,`Rekonsiliasi ${DB.rekon.periode} ditandai tuntas`);toast('Rekonsiliasi ditandai tuntas','g');render()});
  b('#addW',()=>formRawat());
+ b('#addRutin',()=>formRutin());
+ $$('[data-rwtab]').forEach(e=>e.onclick=()=>{RW.tab=e.dataset.rwtab;render()});
+ $$('[data-rwst]').forEach(e=>e.onclick=()=>{RW.status=e.dataset.rwst;render()});
+ $$('[data-rwthn]').forEach(e=>e.onclick=()=>{RW.thn+=+e.dataset.rwthn;render()});
+ {const rb=$('#rwBln');if(rb)rb.onchange=()=>{RW.bulan=rb.value;render()}}
+ {const rq=$('#rwQ');if(rq)rq.oninput=()=>{RW.q=rq.value;render();const e2=$('#rwQ');if(e2){e2.focus();e2.setSelectionRange(e2.value.length,e2.value.length)}}}
+ $$('[data-rwchk]').forEach(e=>e.onclick=ev=>{ev.preventDefault();const m=DB.rawat.find(r=>r.id===e.dataset.rwchk);if(!m||!can('rawat'))return;m.status==='SELESAI'?batalSelesaiRawat(m.id):selesaiRawat(m.id)});
+ $$('[data-rwedit]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();editRawat(e.dataset.rwedit)});
+ $$('[data-rtedit]').forEach(e=>e.onclick=()=>formRutin(e.dataset.rtedit));
+ $$('[data-rtbaru]').forEach(e=>e.onclick=()=>formRutin('',e.dataset.rtbaru));
  const dr=$('#doR');if(dr)dr.onclick=()=>doRet(dr.dataset.id);
  const de=$('#doE');if(de)de.onclick=()=>doEdit(de.dataset.k);
  const dm=$('#doM');if(dm)dm.onclick=()=>doMAdd(dm.dataset.set);
@@ -3148,7 +3325,7 @@ async function supaMuat() {
   if (!user) throw new Error('Belum login.');
 
   const [pRow, master, aset, mutasi, pinjam, rawat, hapus, lepas, rekon, audit, konfig,
-         opnameSesi, opnameDetail, izinRow] = await Promise.all([
+         opnameSesi, opnameDetail, izinRow, rutin] = await Promise.all([
     supa.from('pengguna').select('*').eq('id', user.id).single().then(r => r.data),
     supa.from('master').select('*').eq('aktif', true).order('urut'),
     supa.from('aset').select('*'),
@@ -3162,6 +3339,7 @@ async function supaMuat() {
     supa.from('opname_sesi').select('*'),
     supa.from('opname_detail').select('*'),
     supa.from('pengguna').select('id').eq('id', user.id).single().then(() => null), // placeholder, izin diambil di bawah
+    supa.from('rawat_rutin').select('*'),
   ]);
 
   if (!pRow) throw new Error('Akun ini belum terdaftar. Minta admin menambahkan lewat menu Pengguna.');
@@ -3191,7 +3369,7 @@ async function supaMuat() {
     dept: grup('dept'), kat: grup('kat'), lok: grup('lok'), org: grup('org'), proy: grup('proy'),
     mutasi: cekGalat(mutasi),
     pinjam: petakan(cekGalat(pinjam), PETA_PINJAM),
-    rawat: cekGalat(rawat),
+    rawat: cekGalat(rawat), rawatRutin: cekGalat(rutin),
     opnameList: berjalanList, opnameArsip: arsip,
     hapus: petakan(cekGalat(hapus), PETA_HAPUS),
     rekon: petakan(cekGalat(rekon), PETA_REKON),
@@ -3258,6 +3436,21 @@ function srv(nama, ...args) {
         const r = cekGalat(await supa.rpc('rpc_terima', { p_id_pinjam: args[0], f: args[1] }));
         return { aset: petakan(r.aset, PETA_ASET), pinjam: petakan(r.pinjam, PETA_PINJAM) };
       }
+
+      case 'apiSimpanRutin':
+        return cekGalat(await supa.rpc('rpc_simpan_rutin', { f: args[0] }));
+
+      case 'apiHapusRutin':
+        return cekGalat(await supa.rpc('rpc_hapus_rutin', { p_id: args[0] }));
+
+      case 'apiUbahRawat':
+        return cekGalat(await supa.rpc('rpc_ubah_rawat', { p_id: args[0], f: args[1] || {} }));
+
+      case 'apiBatalSelesaiRawat':
+        return cekGalat(await supa.rpc('rpc_batal_selesai_rawat', { p_id: args[0] }));
+
+      case 'apiHapusRawat':
+        return cekGalat(await supa.rpc('rpc_hapus_rawat', { p_id: args[0] }));
 
       case 'apiBuatRawat':
         return cekGalat(await supa.rpc('rpc_buat_rawat', { f: args[0] }));
@@ -3417,6 +3610,7 @@ function pasangData(d){
   DB.mutasi=d.mutasi;
   DB.pinjam=d.pinjam;
   DB.rawat=d.rawat;
+  DB.rawatRutin=d.rawatRutin||[];
   DB.audit=(d.audit||[]).map(l=>({w:l.waktu,u:l.pengguna,a:l.aksi,e:l.entitas,i:l.idEntitas,k:l.keterangan}));
   DB.opnameList=(d.opnameList||[]).map(o=>({id:o.id,nama:o.nama,lok:o.lok,mulai:o.mulai,pj:o.pj,uji:!!o.uji,
     detail:(o.detail||[]).map(z=>({kode:z.kode,exp:z.lokHarusnya,st:z.st,kond:z.kond,w:z.dipindai}))}));
@@ -3985,6 +4179,7 @@ async function keluarSesi(){
 /* ── 11. Titik masuk — beda dari versi Apps Script: cek sesi dulu ── */
 async function mulaiSetelahLogin(){
   try{
+    try{ await supa.rpc('rpc_isi_rutin'); }catch(e){ console.warn('isi tugas perawatan berulang gagal', e); }
     await muatUlang();
     document.getElementById('boot').style.display='none';
     document.getElementById('aplikasi').style.display='';
