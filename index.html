@@ -1492,11 +1492,18 @@ function editRawat(id){
   <div class="f2"><div class="fl"><label>Tanggal jadwal${m.rutin_id?' (geser siklus ini saja)':''}</label><input type="date" class="in" id="eT" value="${new Date(m.jadwal).toISOString().slice(0,10)}"></div>
   ${sel?`<div class="fl"><label>Tanggal dikerjakan</label><input type="date" class="in" id="eP" value="${new Date(m.pelaksanaan).toISOString().slice(0,10)}"></div>`:''}
   <div class="fl"><label>${sel?'Biaya sebenarnya':'Perkiraan biaya'}</label><input type="number" class="in" id="eB" value="${m.biaya||''}" placeholder="0"></div></div>
-  <div class="fl"><label>Keterangan</label><input class="in" id="eK" value="${es(m.ket==='—'?'':m.ket)}"></div>`,
+  <div class="fl"><label>Keterangan</label><input class="in" id="eK" value="${es(m.ket==='—'?'':m.ket)}"></div>
+  ${m.rutin_id&&!sel?`<label id="eSWrap" style="display:none;gap:8px;align-items:flex-start;font-size:12px;line-height:1.5;cursor:pointer;background:var(--surf2);border-radius:9px;padding:9px 11px"><input type="checkbox" id="eS" style="width:auto;margin-top:2px"><span>Pakai <b id="eSHari"></b> ini juga untuk <b>siklus berikutnya</b>. Kalau tidak dicentang, hanya siklus ini yang bergeser.</span></label>`:''}`,
   `${izin?`${sel?`<button class="b" id="batalSel" data-id="${id}" style="margin-right:auto">Batalkan centang selesai</button>`:(m.rutin_id?'':`<button class="b d" id="hapusTugas" data-id="${id}" style="margin-right:auto">Hapus</button>`)}`:''}<button class="b" onclick="closeAll()">Tutup</button>${izin?`${sel?'':`<button class="b" id="tandaiSel" data-id="${id}">Tandai selesai…</button>`}<button class="b n" id="doEr" data-id="${id}">Simpan</button>`:''}`);
  pasangVendorAuto(vend);
  const d=s=>$(s);
- if(d('#doEr'))d('#doEr').onclick=async()=>{await aksi('apiUbahRawat',id,{jadwal:d('#eT')?d('#eT').value:'',vendor:$('#wV').value.trim(),vendorhp:$('#wH').value.trim(),vendoralamat:$('#wL').value.trim(),biaya:d('#eB').value,ket:d('#eK').value.trim(),tgl:d('#eP')?d('#eP').value:''});toast('Perubahan disimpan','g');closeAll()};
+ /* Pilihan "siklus berikutnya juga" baru muncul kalau tanggalnya memang diubah. */
+ if(d('#eT')&&d('#eSWrap')){
+  const awal=d('#eT').value,cek=()=>{const beda=d('#eT').value&&d('#eT').value!==awal;d('#eSWrap').style.display=beda?'flex':'none';if(!beda)d('#eS').checked=false;
+   if(beda)d('#eSHari').textContent='tanggal '+(+d('#eT').value.split('-')[2])};
+  d('#eT').oninput=cek;d('#eT').onchange=cek;
+ }
+ if(d('#doEr'))d('#doEr').onclick=async()=>{await aksi('apiUbahRawat',id,{seterusnya:d('#eS')?d('#eS').checked:false,jadwal:d('#eT')?d('#eT').value:'',vendor:$('#wV').value.trim(),vendorhp:$('#wH').value.trim(),vendoralamat:$('#wL').value.trim(),biaya:d('#eB').value,ket:d('#eK').value.trim(),tgl:d('#eP')?d('#eP').value:''});toast(d('#eS')&&d('#eS').checked?'Disimpan, tanggal berlaku juga untuk siklus berikutnya':'Perubahan disimpan','g');closeAll()};
  if(d('#tandaiSel'))d('#tandaiSel').onclick=()=>selesaiRawat(id);
  if(d('#batalSel'))d('#batalSel').onclick=()=>batalSelesaiRawat(id);
  if(d('#hapusTugas'))d('#hapusTugas').onclick=async()=>{if(!confirm('Hapus tugas perawatan ini?'))return;await aksi('apiHapusRawat',id);toast('Tugas dihapus','g');closeAll()};
