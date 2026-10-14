@@ -1303,6 +1303,9 @@ function rutinBulan(r,thn){
  return out;
 }
 function rutinPola(r){return`tiap ${r.interval_bulan} bulan`}
+function vNama(v){return v.vendor&&v.vendor!=='Belum ditentukan'?es(v.vendor):'<span style="color:var(--lb4)">Belum ditentukan</span>'}
+function vTelp(v){return v.vendorhp?es(v.vendorhp):'<span style="color:var(--lb4)">—</span>'}
+function vAlamat(v){return v.vendoralamat?es(v.vendoralamat):'<span style="color:var(--lb4)">—</span>'}
 function vendorBaris(v){
  const nama=v.vendor&&v.vendor!=='Belum ditentukan'?es(v.vendor):'<span style="color:var(--lb4)">Belum ditentukan</span>';
  return`<div>${nama}</div>${v.vendorhp?`<div style="color:var(--lb3);font-size:11.5px">${es(v.vendorhp)}</div>`:''}${v.vendoralamat?`<div style="color:var(--lb3);font-size:11.5px">${es(v.vendoralamat)}</div>`:''}`;
@@ -1348,16 +1351,16 @@ function vRawatTugas(){
   <span style="font-size:11.5px;color:var(--lb3)">${r.length} tugas</span>
  </div>
  <div class="cd" style="margin:0"><table>
- <thead><tr><th style="width:34px"></th><th>Aset</th><th style="width:84px">Jenis</th><th style="width:100px">Jadwal</th><th>Vendor</th><th style="width:96px" class="nu">Biaya</th><th style="width:44px"></th></tr></thead>
+ <thead><tr><th style="width:34px"></th><th>Aset</th><th style="width:84px">Jenis</th><th style="width:100px">Jadwal</th><th style="width:130px">Vendor</th><th style="width:120px">Telepon</th><th>Alamat</th><th style="width:96px" class="nu">Biaya</th><th style="width:44px"></th></tr></thead>
  <tbody>${r.length?r.map(m=>{const x=AX(m.kode),tl=rwTelat(m),sel=m.status==='SELESAI';
   return`<tr class="${sel?'':''}"><td><input type="checkbox" data-rwchk="${m.id}" ${sel?'checked':''} ${can('rawat')?'':'disabled'} style="width:auto;cursor:pointer" title="${sel?'Sudah selesai — klik untuk membatalkan':'Tandai selesai'}"></td>
   <td><div class="c1" style="${sel?'color:var(--lb3)':''}">${es(x?x.nama:m.kode)}${capHapus(m.kode)}</div><div class="c2"><span class="mn">${m.kode}</span> · ${es(m.ket)}</div></td>
   <td><span class="tag">${m.jenis[0]+m.jenis.slice(1).toLowerCase()}</span></td>
   <td>${sel?`<span style="color:var(--gr)">${dt(m.pelaksanaan)}</span><div class="c2">jadwal ${es(rwJadwalTeks(m))}</div>`:tl?`<span style="color:var(--rd)">${es(rwJadwalTeks(m))}</span><div class="c2" style="color:var(--rd)">terlambat</div>`:es(rwJadwalTeks(m))}</td>
-  <td style="font-size:12px;line-height:1.4">${vendorBaris(m)}</td>
+  <td style="font-size:12px">${vNama(m)}</td><td style="font-size:12px;white-space:nowrap">${vTelp(m)}</td><td style="font-size:12px">${vAlamat(m)}</td>
   <td class="nu">${m.biaya?m.biaya.toLocaleString('id-ID'):'<span style="color:var(--lb4)">0</span>'}</td>
   <td>${can('rawat')?`<button class="ibt" data-rwedit="${m.id}" title="Ubah">${ic('edit')}</button>`:''}</td></tr>`}).join(''):
-  `<tr><td colspan="7"><div class="emp">${ic('check')}<b>Tidak ada tugas</b><span>${RW.status==='belum'?'Semua perawatan sudah dicentang selesai.':'Tidak ada yang cocok dengan filter ini.'}</span></div></td></tr>`}
+  `<tr><td colspan="9"><div class="emp">${ic('check')}<b>Tidak ada tugas</b><span>${RW.status==='belum'?'Semua perawatan sudah dicentang selesai.':'Tidak ada yang cocok dengan filter ini.'}</span></div></td></tr>`}
  </tbody></table></div>`;
 }
 function vRawatTahun(){
@@ -1382,12 +1385,12 @@ function vRawatRutin(){
  if(!rutin.length)return`<div class="cd" style="margin:0"><div class="emp">${ic('sync')}<b>Belum ada jadwal berulang</b><span>Contoh: servis tiap 3 bulan mulai Maret, otomatis jadi tugas Mar, Jun, Sep, Des.</span></div></div>`;
  const th=TODAY.getFullYear();
  return`<div class="cd" style="margin:0"><table>
- <thead><tr><th>Aset</th><th style="width:150px">Pola</th><th style="width:190px">Bulan ${th}</th><th>Vendor</th><th style="width:96px" class="nu">Biaya</th><th style="width:70px"></th></tr></thead>
+ <thead><tr><th>Aset</th><th style="width:150px">Pola</th><th style="width:190px">Bulan ${th}</th><th style="width:130px">Vendor</th><th style="width:120px">Telepon</th><th>Alamat</th><th style="width:96px" class="nu">Biaya</th><th style="width:70px"></th></tr></thead>
  <tbody>${rutin.map(r=>{const x=AX(r.kode),sel=DB.rawat.filter(m=>m.rutin_id===r.id&&m.status==='SELESAI').length,tot=DB.rawat.filter(m=>m.rutin_id===r.id).length;
   return`<tr style="${r.aktif?'':'opacity:.55'}"><td><div class="c1">${es(x?x.nama:r.kode)}</div><div class="c2"><span class="mn">${r.kode}</span> · ${es(r.ket||'')}</div></td>
   <td>${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())}<div class="c2">${rutinPola(r)} · tiap tanggal ${r.mulai.getUTCDate()}</div><div class="c2">mulai ${dt(r.mulai)}</div>${r.aktif?'':'<div class="c2">nonaktif</div>'}</td>
   <td style="font-size:12px">${rutinBulan(r,th).map(i=>Math.min(r.mulai.getUTCDate(),new Date(th,i+1,0).getDate())+' '+BLN[i]).join(', ')||'<span style="color:var(--lb4)">—</span>'}<div class="c2">${sel} dari ${tot} tugas selesai</div></td>
-  <td style="font-size:12px;line-height:1.4">${vendorBaris(r)}</td>
+  <td style="font-size:12px">${vNama(r)}</td><td style="font-size:12px;white-space:nowrap">${vTelp(r)}</td><td style="font-size:12px">${vAlamat(r)}</td>
   <td class="nu">${r.biaya?r.biaya.toLocaleString('id-ID'):'<span style="color:var(--lb4)">0</span>'}</td>
   <td>${can('rawat')?`<button class="ibt" data-rtedit="${r.id}" title="Ubah jadwal berulang">${ic('edit')}</button>`:''}</td></tr>`}).join('')}</tbody></table></div>`;
 }
