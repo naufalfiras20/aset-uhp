@@ -1288,9 +1288,9 @@ function blnLabel(per){const [y,m]=per.split('-');return BLN[+m-1]+' '+y}
 function akhirBulan(per){const [y,m]=per.split('-').map(Number);return new Date(y,m,0,23,59,59)}
 function perIni(){const d=TODAY;return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
 function rwKey(m){return m.periode||new Date(m.jadwal).toISOString().slice(0,7)}
-function rwTelat(m){return m.status!=='SELESAI'&&(m.periode?akhirBulan(m.periode)<TODAY:dy(TODAY,m.jadwal)>0)}
-function rwTempoHari(m){return m.periode?akhirBulan(m.periode):m.jadwal}
-function rwJadwalTeks(m){return m.periode?blnLabel(m.periode):dt(m.jadwal)}
+function rwTelat(m){return m.status!=='SELESAI'&&dy(TODAY,m.jadwal)>0}
+function rwTempoHari(m){return m.jadwal}
+function rwJadwalTeks(m){return dt(m.jadwal)}
 function rwKode(m){return m.status==='SELESAI'?'selesai':rwTelat(m)?'telat':rwKey(m)===perIni()?'ini':'depan'}
 function rwDot(k,t){
  const base='display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:middle;box-sizing:border-box;';
@@ -1368,10 +1368,10 @@ function vRawatTahun(){
   <thead><tr><th>Aset</th>${BLN.map((b,i)=>`<th style="width:50px;text-align:center;${th===TODAY.getFullYear()&&i===TODAY.getMonth()?'color:var(--org)':''}">${b}</th>`).join('')}</tr></thead>
   <tbody>${rutin.map(r=>{const x=AX(r.kode),bul=rutinBulan(r,th),tugas={};
    DB.rawat.filter(m=>m.rutin_id===r.id).forEach(m=>{tugas[m.periode]=m});
-   return`<tr style="${r.aktif?'':'opacity:.5'}"><td><div class="c1">${es(x?x.nama:r.kode)}</div><div class="c2"><span class="mn">${r.kode}</span> · ${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())} ${rutinPola(r)}${r.aktif?'':' · nonaktif'}</div></td>
+   return`<tr style="${r.aktif?'':'opacity:.5'}"><td><div class="c1">${es(x?x.nama:r.kode)}</div><div class="c2"><span class="mn">${r.kode}</span> · ${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())} ${rutinPola(r)} · tgl ${r.mulai.getUTCDate()}${r.aktif?'':' · nonaktif'}</div></td>
    ${BLN.map((b,i)=>{const per=th+'-'+String(i+1).padStart(2,'0'),t=tugas[per];
-    if(t){const k=rwKode(t);return`<td style="text-align:center;cursor:pointer" data-rwedit="${t.id}">${rwDot(k,blnLabel(per)+' — '+({selesai:'selesai',telat:'terlambat',ini:'bulan ini',depan:'akan datang'})[k])}</td>`}
-    return`<td style="text-align:center">${bul.includes(i)?`<span title="Dijadwalkan ${blnLabel(per)} — tugas dibuat otomatis" style="color:var(--lb4)">${rwDot('depan')}</span>`:'<span style="color:var(--sep2)">·</span>'}</td>`}).join('')}</tr>`}).join('')}</tbody></table></div>
+    if(t){const k=rwKode(t);return`<td style="text-align:center;cursor:pointer" data-rwedit="${t.id}">${rwDot(k,dt(t.jadwal)+' — '+({selesai:'selesai',telat:'terlambat',ini:'bulan ini',depan:'akan datang'})[k])}<div style="font-size:10px;color:var(--lb3);margin-top:2px">${new Date(t.jadwal).getUTCDate()}</div></td>`}
+    return`<td style="text-align:center">${bul.includes(i)?`<span  title="Dijadwalkan ${blnLabel(per)} — tugas dibuat otomatis" style="color:var(--lb4)">${rwDot('depan')}</span>`:'<span style="color:var(--sep2)">·</span>'}</td>`}).join('')}</tr>`}).join('')}</tbody></table></div>
   <p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Klik sebuah bulan untuk membuka tugasnya: tandai selesai, ubah vendor atau biaya.</p>`;
 }
 function vRawatRutin(){
@@ -1382,8 +1382,8 @@ function vRawatRutin(){
  <thead><tr><th>Aset</th><th style="width:150px">Pola</th><th style="width:190px">Bulan ${th}</th><th>Vendor</th><th style="width:96px" class="nu">Biaya</th><th style="width:70px"></th></tr></thead>
  <tbody>${rutin.map(r=>{const x=AX(r.kode),sel=DB.rawat.filter(m=>m.rutin_id===r.id&&m.status==='SELESAI').length,tot=DB.rawat.filter(m=>m.rutin_id===r.id).length;
   return`<tr style="${r.aktif?'':'opacity:.55'}"><td><div class="c1">${es(x?x.nama:r.kode)}</div><div class="c2"><span class="mn">${r.kode}</span> · ${es(r.ket||'')}</div></td>
-  <td>${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())}<div class="c2">${rutinPola(r)} · mulai ${blnLabel(r.mulai.getUTCFullYear()+'-'+String(r.mulai.getUTCMonth()+1).padStart(2,'0'))}</div>${r.aktif?'':'<div class="c2">nonaktif</div>'}</td>
-  <td style="font-size:12px">${rutinBulan(r,th).map(i=>BLN[i]).join(', ')||'<span style="color:var(--lb4)">—</span>'}<div class="c2">${sel} dari ${tot} tugas selesai</div></td>
+  <td>${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())}<div class="c2">${rutinPola(r)} · tiap tanggal ${r.mulai.getUTCDate()}</div><div class="c2">mulai ${dt(r.mulai)}</div>${r.aktif?'':'<div class="c2">nonaktif</div>'}</td>
+  <td style="font-size:12px">${rutinBulan(r,th).map(i=>Math.min(r.mulai.getUTCDate(),new Date(th,i+1,0).getDate())+' '+BLN[i]).join(', ')||'<span style="color:var(--lb4)">—</span>'}<div class="c2">${sel} dari ${tot} tugas selesai</div></td>
   <td style="font-size:12px;line-height:1.4">${vendorBaris(r)}</td>
   <td class="nu">${r.biaya?r.biaya.toLocaleString('id-ID'):'<span style="color:var(--lb4)">0</span>'}</td>
   <td>${can('rawat')?`<button class="ibt" data-rtedit="${r.id}" title="Ubah jadwal berulang">${ic('edit')}</button>`:''}</td></tr>`}).join('')}</tbody></table></div>`;
@@ -1406,45 +1406,63 @@ function barisVendorForm(v,vend){
 function pasangVendorAuto(vend){
  $('#wV').oninput=()=>{const v=vend.find(x=>x.nama.toLowerCase()===$('#wV').value.trim().toLowerCase());if(v){if(!$('#wH').value)$('#wH').value=v.hp;if(!$('#wL').value)$('#wL').value=v.alamat}};
 }
-function asetOpsi(sel){return DB.aset.filter(x=>x.stat!=='HILANG'&&x.stat!=='DILEPAS').map(x=>`<option value="${x.kode}" ${x.kode===sel?'selected':''}>${x.kode} — ${es(x.nama)}</option>`).join('')}
+function asetCari(idSel,pilih){
+ return`<div class="fl"><label>Aset</label><input class="in" id="${idSel}q" placeholder="Cari kode atau nama aset…" autocomplete="off" style="margin-bottom:6px"><select id="${idSel}" size="6" style="width:100%"></select><div id="${idSel}n" style="font-size:11px;color:var(--lb3);margin-top:3px"></div></div>`;
+}
+function pasangAsetCari(idSel,pilih){
+ const semua=DB.aset.filter(x=>x.stat!=='HILANG'&&x.stat!=='DILEPAS');
+ const sel=$('#'+idSel),q=$('#'+idSel+'q'),n=$('#'+idSel+'n');let dipilih=pilih||'';
+ const isi=()=>{
+  const t=q.value.trim().toLowerCase();
+  const cocok=t?semua.filter(x=>(x.kode+' '+x.nama+' '+kn(x.kat)+' '+ln(x.lok)).toLowerCase().includes(t)):semua;
+  const tampil=cocok.slice(0,80);
+  sel.innerHTML=tampil.map(x=>`<option value="${x.kode}">${x.kode} — ${es(x.nama)}</option>`).join('')||'<option value="" disabled>Tidak ada aset yang cocok</option>';
+  if(tampil.some(x=>x.kode===dipilih))sel.value=dipilih;else if(tampil.length){sel.value=tampil[0].kode;dipilih=tampil[0].kode}else dipilih='';
+  n.textContent=cocok.length>80?`Menampilkan 80 dari ${cocok.length} aset — ketik lebih spesifik`:`${cocok.length} aset`;
+  const o=sel.options[sel.selectedIndex];if(o&&o.scrollIntoView)sel.scrollTop=Math.max(0,o.offsetTop-sel.clientHeight/2);
+ };
+ q.oninput=isi;sel.onchange=()=>{dipilih=sel.value};isi();
+}
 function formRawat(kode0){
  const vend=daftarVendor();
  modal('Perawatan sekali',`${barisVendorForm(null,vend)}
-  <div class="fl"><label>Aset</label><select id="wK">${asetOpsi(kode0)}</select></div>
+  ${asetCari('wK')}
   <div class="f2"><div class="fl"><label>Jenis</label><select id="wJ"><option>RUTIN</option><option>PERBAIKAN</option><option>KALIBRASI</option><option>INSPEKSI</option></select></div>
   <div class="fl"><label>Tanggal</label><input type="date" class="in" id="wT" value="${hariIniIso()}"></div></div>
   <div class="f2"><div class="fl"><label>Perkiraan biaya</label><input type="number" class="in" id="wB" placeholder="0"></div>
   <div class="fl"><label>Keterangan</label><input class="in" id="wE" placeholder="Servis berkala 6 bulan"></div></div>`,
   `<button class="b" onclick="closeAll()">Batal</button><button class="b n" id="doW">Simpan</button>`);
- pasangVendorAuto(vend);
+ pasangVendorAuto(vend);pasangAsetCari('wK',kode0);
  $('#doW').onclick=simpanRawat;
 }
 async function simpanRawat(){
  const k=$('#wK').value;
+ if(!k)return toast('Pilih asetnya dulu','r');
  if(!$('#wT').value)return toast('Isi tanggal perawatan','r');
  await aksi('apiBuatRawat',{kode:k,jenis:$('#wJ').value,jadwal:$('#wT').value,vendor:$('#wV').value.trim(),vendorhp:$('#wH').value.trim(),vendoralamat:$('#wL').value.trim(),biaya:$('#wB').value,ket:$('#wE').value.trim()});
  toast('Jadwal perawatan disimpan','g');closeAll();
 }
 function formRutin(id,kode0){
  const r=id?DB.rawatRutin.find(x=>x.id===id):null,vend=daftarVendor();
- const mulaiVal=r?r.mulai.getUTCFullYear()+'-'+String(r.mulai.getUTCMonth()+1).padStart(2,'0'):perIni();
+ const mulaiVal=r?r.mulai.toISOString().slice(0,10):hariIniIso();
  modal(r?'Ubah jadwal berulang':'Jadwal berulang',`${barisVendorForm(r,vend)}
-  <div class="fl"><label>Aset</label><select id="rK">${asetOpsi(r?r.kode:kode0)}</select></div>
+  ${asetCari('rK')}
   <div class="f2"><div class="fl"><label>Jenis</label><select id="rJ"><option ${r&&r.jenis==='RUTIN'?'selected':''}>RUTIN</option><option ${r&&r.jenis==='KALIBRASI'?'selected':''}>KALIBRASI</option><option ${r&&r.jenis==='INSPEKSI'?'selected':''}>INSPEKSI</option></select></div>
   <div class="fl"><label>Ulang tiap</label><select id="rI">${[[1,'1 bulan (bulanan)'],[2,'2 bulan'],[3,'3 bulan'],[4,'4 bulan'],[6,'6 bulan'],[12,'12 bulan (tahunan)']].map(([n,l])=>`<option value="${n}" ${(r?r.interval_bulan:3)===n?'selected':''}>${l}</option>`).join('')}</select></div></div>
-  <div class="f2"><div class="fl"><label>Mulai bulan</label><input type="month" class="in" id="rM" value="${mulaiVal}"></div>
+  <div class="f2"><div class="fl"><label>Mulai tanggal</label><input type="date" class="in" id="rM" value="${mulaiVal}"></div>
   <div class="fl"><label>Biaya per perawatan</label><input type="number" class="in" id="rB" value="${r&&r.biaya?r.biaya:''}" placeholder="0"></div></div>
   <div class="fl"><label>Keterangan</label><input class="in" id="rE" value="${es(r?r.ket:'')}" placeholder="Misal: servis dan bersih sensor"></div>
   <div id="rPrev" style="background:var(--surf2);border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.55;color:var(--lb2)"></div>
   ${r?`<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12px;cursor:pointer"><input type="checkbox" id="rA" ${r.aktif?'checked':''} style="width:auto">Jadwal aktif (matikan untuk berhenti membuat tugas baru)</label>
   <p style="font-size:11px;color:var(--lb3);margin-top:6px;line-height:1.5">Kalau pola diubah, tugas yang belum dicentang mengikuti pola baru. Yang sudah selesai tetap tersimpan.</p>`:''}`,
   `${r?`<button class="b d" id="hapusRutin" data-id="${r.id}" style="margin-right:auto">Hapus jadwal</button>`:''}<button class="b" onclick="closeAll()">Batal</button><button class="b n" id="doRt" ${r?`data-id="${r.id}"`:''}>Simpan</button>`);
- pasangVendorAuto(vend);
+ pasangVendorAuto(vend);pasangAsetCari('rK',r?r.kode:kode0);
  const prev=()=>{
   const m=$('#rM').value,n=+$('#rI').value;if(!m)return $('#rPrev').textContent='';
-  const [y,mo]=m.split('-').map(Number),fake={mulai:new Date(Date.UTC(y,mo-1,1)),interval_bulan:n},th=Math.max(y,TODAY.getFullYear());
-  const a=rutinBulan(fake,y).map(i=>BLN[i]),b=rutinBulan(fake,y+1).map(i=>BLN[i]);
-  $('#rPrev').innerHTML=`Tugas dibuat otomatis tiap ${n} bulan mulai <b>${BLN_PANJANG[mo-1]} ${y}</b>.<br>${y}: <b>${a.join(', ')||'—'}</b>${b.length?`<br>${y+1}: <b>${b.join(', ')}</b>`:''}`;
+  const [y,mo,hr]=m.split('-').map(Number),fake={mulai:new Date(Date.UTC(y,mo-1,1)),interval_bulan:n};
+  const tg=(th,i)=>Math.min(hr,new Date(th,i+1,0).getDate())+' '+BLN[i];
+  const a=rutinBulan(fake,y).map(i=>tg(y,i)),b=rutinBulan(fake,y+1).map(i=>tg(y+1,i));
+  $('#rPrev').innerHTML=`Tugas dibuat otomatis tiap ${n} bulan, <b>tiap tanggal ${hr}</b>, mulai <b>${hr} ${BLN_PANJANG[mo-1]} ${y}</b>.<br>${y}: <b>${a.join(', ')||'—'}</b>${b.length?`<br>${y+1}: <b>${b.join(', ')}</b>`:''}${hr>28?'<br><span style="color:var(--lb3)">Bulan yang lebih pendek memakai hari terakhirnya.</span>':''}`;
  };
  $('#rM').oninput=prev;$('#rI').onchange=prev;prev();
  $('#doRt').onclick=simpanRutin;
@@ -1452,7 +1470,8 @@ function formRutin(id,kode0){
 }
 async function simpanRutin(){
  const id=($('#doRt').dataset.id)||'';
- if(!$('#rM').value)return toast('Pilih bulan mulai','r');
+ if(!$('#rK').value)return toast('Pilih asetnya dulu','r');
+ if(!$('#rM').value)return toast('Pilih tanggal mulai','r');
  await aksi('apiSimpanRutin',{id,kode:$('#rK').value,jenis:$('#rJ').value,interval:$('#rI').value,mulai:$('#rM').value,vendor:$('#wV').value.trim(),vendorhp:$('#wH').value.trim(),vendoralamat:$('#wL').value.trim(),biaya:$('#rB').value,ket:$('#rE').value.trim(),aktif:id?$('#rA').checked:true});
  toast(id?'Jadwal berulang diperbarui':'Jadwal berulang dibuat','g');closeAll();
 }
@@ -1470,7 +1489,7 @@ function editRawat(id){
   <div class="kr"><dt>Jenis</dt><dd>${es(m.jenis[0]+m.jenis.slice(1).toLowerCase())}${m.rutin_id?' · jadwal berulang':''}</dd></div>
   <div class="kr"><dt>Jadwal</dt><dd>${es(rwJadwalTeks(m))} ${sel?pl('g','selesai '+dt(m.pelaksanaan)):rwTelat(m)?pl('r','terlambat'):''}</dd></div></div>
   ${barisVendorForm(m,vend)}
-  <div class="f2">${m.rutin_id?'':`<div class="fl"><label>Tanggal jadwal</label><input type="date" class="in" id="eT" value="${new Date(m.jadwal).toISOString().slice(0,10)}"></div>`}
+  <div class="f2"><div class="fl"><label>Tanggal jadwal${m.rutin_id?' (geser siklus ini saja)':''}</label><input type="date" class="in" id="eT" value="${new Date(m.jadwal).toISOString().slice(0,10)}"></div>
   ${sel?`<div class="fl"><label>Tanggal dikerjakan</label><input type="date" class="in" id="eP" value="${new Date(m.pelaksanaan).toISOString().slice(0,10)}"></div>`:''}
   <div class="fl"><label>${sel?'Biaya sebenarnya':'Perkiraan biaya'}</label><input type="number" class="in" id="eB" value="${m.biaya||''}" placeholder="0"></div></div>
   <div class="fl"><label>Keterangan</label><input class="in" id="eK" value="${es(m.ket==='—'?'':m.ket)}"></div>`,
@@ -1890,7 +1909,7 @@ function openAsset(k){
   ${(()=>{
    const rt=DB.rawatRutin.filter(r=>r.kode===k),tg=DB.rawat.filter(m=>m.kode===k),buka=tg.filter(m=>m.status!=='SELESAI').sort((a,b)=>rwTempoHari(a)-rwTempoHari(b)),sudah=tg.filter(m=>m.status==='SELESAI').sort((a,b)=>b.pelaksanaan-a.pelaksanaan);
    return`<div class="sec"><div class="sct">Perawatan</div>
-   ${rt.length?rt.map(r=>`<div style="font-size:12.5px;margin-bottom:6px"><b>${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())} ${rutinPola(r)}</b> · bulan ${rutinBulan(r,TODAY.getFullYear()).map(i=>BLN[i]).join(', ')||'—'}${r.aktif?'':' · nonaktif'}<div style="font-size:11.5px;color:var(--lb3)">${vendorBaris(r)}</div></div>`).join(''):`<div style="font-size:12.5px;color:var(--lb3);margin-bottom:6px">Belum ada jadwal perawatan berulang.</div>`}
+   ${rt.length?rt.map(r=>`<div style="font-size:12.5px;margin-bottom:6px"><b>${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())} ${rutinPola(r)}</b> · tgl ${r.mulai.getUTCDate()} · bulan ${rutinBulan(r,TODAY.getFullYear()).map(i=>BLN[i]).join(', ')||'—'}${r.aktif?'':' · nonaktif'}<div style="font-size:11.5px;color:var(--lb3)">${vendorBaris(r)}</div></div>`).join(''):`<div style="font-size:12.5px;color:var(--lb3);margin-bottom:6px">Belum ada jadwal perawatan berulang.</div>`}
    ${buka.length?`<div class="ins">${buka.slice(0,4).map(m=>`<div class="kr"><dt>${es(rwJadwalTeks(m))}</dt><dd style="text-align:right">${es(m.jenis[0]+m.jenis.slice(1).toLowerCase())} ${rwTelat(m)?pl('r','terlambat'):pl('m','belum')}</dd></div>`).join('')}</div>`:''}
    ${sudah.length?`<div style="font-size:11.5px;color:var(--lb3);margin-top:6px">${sudah.length}× sudah dirawat · terakhir <b>${dt(sudah[0].pelaksanaan)}</b></div>`:''}
    ${can('rawat')?`<button class="b s" style="margin-top:8px" data-rtbaru="${k}">${ic('sync')}Jadwal berulang</button>`:''}</div>`})()}
