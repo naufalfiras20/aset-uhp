@@ -1303,7 +1303,10 @@ function rutinBulan(r,thn){
  return out;
 }
 function rutinPola(r){return`tiap ${r.interval_bulan} bulan`}
-function vendorBaris(v){return[v.vendor&&v.vendor!=='Belum ditentukan'?es(v.vendor):'<span style="color:var(--lb4)">Belum ditentukan</span>',v.vendorhp?es(v.vendorhp):'',v.vendoralamat?es(v.vendoralamat):''].filter(Boolean).join(' · ')}
+function vendorBaris(v){
+ const nama=v.vendor&&v.vendor!=='Belum ditentukan'?es(v.vendor):'<span style="color:var(--lb4)">Belum ditentukan</span>';
+ return`<div>${nama}</div>${v.vendorhp?`<div style="color:var(--lb3);font-size:11.5px">${es(v.vendorhp)}</div>`:''}${v.vendoralamat?`<div style="color:var(--lb3);font-size:11.5px">${es(v.vendoralamat)}</div>`:''}`;
+}
 
 function vRawat(){
  const SEMUA=DB.rawat,ak=SEMUA.filter(m=>m.status!=='SELESAI');
