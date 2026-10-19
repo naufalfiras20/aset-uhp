@@ -947,7 +947,7 @@ const PG={
  audit:['Log audit',()=>DB.audit.length+' peristiwa tercatat'],
  about:['Tentang',()=>APP.nama+' '+APP.versi]
 };
-const APP={nama:'Aset UHP',versi:'v0.5',thn:'2026',org:'Upscale House Project',
+const APP={nama:'Aset UHP',versi:'v1.8',thn:'2026',org:'Upscale House Project',
  oleh:'Naufal Firas Sutia',
  ringkas:'Mencatat aset kantor: siapa yang pegang, di mana letaknya, kondisinya, dan kapan terakhir dicek.'};
 /* Peran menentukan apa yang boleh dilakukan. Bukan hiasan — dipakai oleh can(). */
@@ -3388,7 +3388,7 @@ async function supaMuat() {
     rekon: petakan(cekGalat(rekon), PETA_REKON),
     audit: petakan(cekGalat(audit), PETA_LOG),
     konfig: konfigObj,
-    app: { nama: 'Aset UHP', versi: '2.0', org: 'Upscale House Project', oleh: 'Naufal Firas Sutia' }
+    app: { nama: 'Aset UHP', versi: '1.8', org: 'Upscale House Project', oleh: 'Naufal Firas Sutia' }
   };
 }
 
