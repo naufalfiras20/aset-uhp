@@ -143,7 +143,7 @@ input[type=checkbox]{accent-color:var(--org);width:13px;height:13px;margin:0}
 
 /* ---- table ---- */
 table{width:100%;border-collapse:collapse}
-th{text-align:left;padding:6px 12px;font-size:11px;font-weight:500;color:var(--lb3);border-bottom:.5px solid var(--sep);background:var(--surf2);white-space:nowrap;user-select:none;position:sticky;top:0;z-index:1}
+th{text-align:left;padding:6px 12px;font-size:11px;font-weight:500;color:var(--lb3);border-bottom:.5px solid var(--sep);background:var(--surf2);white-space:nowrap;user-select:none;position:sticky;top:0;z-index:1;box-shadow:0 .5px 0 var(--sep)}
 th.s{cursor:pointer}th.s:hover{color:var(--lb1)}
 th i{font-style:normal;color:var(--org);font-size:8px;margin-left:2px}
 td{padding:7px 12px;font-size:12.5px;border-bottom:.5px solid var(--sep);vertical-align:middle}
@@ -1096,6 +1096,16 @@ document.addEventListener('click', e => {
 let KOL_VIS={};
 try{KOL_VIS=JSON.parse(localStorage.getItem('kolReg')||'{}')}catch(e){KOL_VIS={}}
 function kolTampil(k){ return KOL_VIS[k]!==false; }
+/* Tabel registri menggulir di dalam kotaknya sendiri setinggi sisa layar: baris filter di atasnya
+   jadi tetap terlihat, dan judul kolom menempel di tepi atas kotak. Di HP tabel berubah jadi kartu,
+   jadi dibiarkan menggulir bersama halaman. */
+function fitReg(){
+ const w=document.getElementById('regWrap');if(!w)return;
+ if(window.innerWidth<=700){w.style.maxHeight='';return}
+ const atas=w.getBoundingClientRect().top;
+ w.style.maxHeight=Math.max(280,window.innerHeight-atas-70)+'px';
+}
+window.addEventListener('resize',()=>fitReg());
 function togKol(k){
  KOL_VIS[k]=!kolTampil(k);
  try{localStorage.setItem('kolReg',JSON.stringify(KOL_VIS))}catch(e){}
@@ -1198,7 +1208,7 @@ function vReg(){
   ${can('editOps')||can('editFin')?`<button class="b s" id="mEdit">${ic('edit')}Edit massal</button>`:''}
   <button class="b s" id="mClr">Batal pilih</button>
  </div></div>`:''}
- <div class="cd" style="margin:0"><div style="overflow-x:auto">
+ <div class="cd" style="margin:0"><div id="regWrap" style="overflow:auto">
  <table><thead><tr><th style="width:30px"><input type="checkbox" id="selAll" ${r.length&&r.every(x=>SEL.has(x.kode))?'checked':''} style="cursor:pointer"></th>${th('kode','Kode')}${KOL_REG.filter(c=>kolTampil(c.k)).map(c=>c.th()).join('')}</tr></thead>
  <tbody>${r.length?r.map(x=>{const l=loanOf(x.kode),tl=l&&late(l)>0;
   return`<tr class="ck ${SEL.has(x.kode)?'selrow':''}" data-k="${x.kode}">
@@ -3062,6 +3072,7 @@ function lapCsv(){
 
 /* ═══════ BIND ═══════ */
 function bind(){
+ fitReg();
  const b=(i,f)=>{const e=$(i);if(e)e.onclick=f},b2=b;
  labeliTabel();
  b('#mnb',bukaMenu); b('#sdsc',tutupMenu);
