@@ -39,6 +39,10 @@ svg{display:block;flex-shrink:0}
 .sd{width:218px;flex-shrink:0;background:var(--sdbg);border-right:.5px solid var(--sep);display:flex;flex-direction:column}
 .sdh{padding:16px 14px 13px}
 .lg{display:flex;align-items:center;gap:9px}
+.sdh img{display:block;width:172px;height:auto}
+.logo-gelap{display:none!important}
+[data-theme="dark"] .logo-terang{display:none!important}
+[data-theme="dark"] .logo-gelap{display:block!important}
 .lgm{width:30px;height:30px;border-radius:8px;background:var(--nvy);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .lgt .a{font-size:11.5px;font-weight:700;letter-spacing:.03em;line-height:1.2}
 .lgt .a .o{color:var(--org)}
@@ -322,10 +326,7 @@ align-items:center;justify-content:center}
 <div id="aplikasi" style="display:none">
 <div class="app">
 <aside class="sd">
-  <div class="sdh"><div class="lg">
-    <div class="lgm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F97D05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/></svg></div>
-    <div class="lgt"><div class="a">UPSCAL<span class="be"></span> <span class="o">HOUS<span class="be"></span></span></div><div class="b">PROJECT</div></div>
-  </div></div>
+  <div class="sdh"><img class="logo-terang" src="img/logo-uhp.png" alt="Upscale House Project"><img class="logo-gelap" src="img/logo-uhp-putih.png" alt="" aria-hidden="true"></div>
   <nav class="sdn" id="nav"></nav>
   <div class="sdf">
     <div class="avt" id="uAv">N</div>
@@ -3272,9 +3273,7 @@ function tampilkanLogin(pesan) {
   el.innerHTML = `
   <div style="width:100%;max-width:340px;padding:28px;background:#fff;border-radius:14px;
     box-shadow:0 1px 3px rgba(0,0,0,.08)">
-    <div style="width:40px;height:40px;border-radius:11px;background:#072B54;display:flex;
-      align-items:center;justify-content:center;margin-bottom:16px">
-      <span style="color:#F97D05;font-weight:700;font-size:11px">UHP</span></div>
+    <img src="img/logo-uhp.png" alt="Upscale House Project" style="display:block;width:210px;max-width:100%;height:auto;margin:0 0 22px">
     <h2 style="font-size:17px;margin:0 0 4px;color:#1a1a1a">Aset UHP</h2>
     <p style="color:#8a8a94;font-size:12.5px;margin:0 0 18px">Masuk dengan username dan kata sandi.</p>
     <div id="gerbangPesan" style="font-size:12.5px;color:#C0392B;margin-bottom:${pesan ? '10px' : '0'};
