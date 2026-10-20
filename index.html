@@ -177,6 +177,7 @@ tbody tr.ck{cursor:pointer}tbody tr.ck:hover{background:var(--surf2)}
 .bl{font-size:12px;color:var(--lb2)}
 .bt{height:5px;background:var(--surf3);border-radius:3px;overflow:hidden}
 .bf{height:100%;background:var(--nvy2);border-radius:3px;transition:width .3s}
+#uNm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hero{position:relative;overflow:hidden;background:var(--nvy);color:#fff;border-radius:var(--rC);padding:20px 24px;margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .hero svg{position:absolute;right:-30px;top:-70px;width:340px;height:340px;pointer-events:none}
 .hero>*:not(svg){position:relative}
@@ -1032,7 +1033,7 @@ function labeliTabel(){
 }
 function render(){
  renderNav();$('#pT').textContent=tr(PG[page][0]);$('#pS').textContent=tr(PG[page][1]());
- $('#uNm').textContent=USER.nama;$('#uNm').title=USER.nama;$('#uAv').textContent=USER.inisial;
+ $('#uNm').textContent=USER.nama;$('#uNm').title=USER.nama;$('#uNm').title=USER.nama;$('#uAv').textContent=USER.inisial;
  $('#uRl').innerHTML=`${USER.pemilik?'Master':tr(es(PERAN[USER.peran].n))}<svg viewBox="0 0 24 24" style="width:9px;height:9px;stroke:var(--lb4);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"/></svg>`;
  $('#addB').style.display=can('editFin')||can('master')?'':'none';
  $$('#lng span').forEach(e=>e.classList.toggle('on',e.dataset.l===LANG));
