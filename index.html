@@ -178,26 +178,6 @@ tbody tr.ck{cursor:pointer}tbody tr.ck:hover{background:var(--surf2)}
 .bt{height:5px;background:var(--surf3);border-radius:3px;overflow:hidden}
 .bf{height:100%;background:var(--nvy2);border-radius:3px;transition:width .3s}
 #uNm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hero{position:relative;overflow:hidden;background:var(--nvy);color:#fff;border-radius:var(--rC);padding:20px 24px;margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.hero svg{position:absolute;right:-30px;top:-70px;width:340px;height:340px;pointer-events:none}
-.hero>*:not(svg){position:relative}
-.hero h2{font-size:19px;font-weight:600;letter-spacing:-.02em;margin:0 0 3px}
-.hero p{margin:0;font-size:12.5px;color:rgba(255,255,255,.72)}
-.hero .hk{flex:1;min-width:220px}
-.hero .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.28);border-radius:20px;padding:5px 12px;font-size:11.5px;color:#fff;background:rgba(255,255,255,.07);cursor:pointer;font-family:inherit}
-.hero .chip:hover{background:rgba(255,255,255,.16)}
-.hero .chip i{width:6px;height:6px;border-radius:50%;background:var(--org)}
-.stc.nb{background:var(--nvy);color:#fff}
-.stc.nb .stl,.stc.nb .std{color:rgba(255,255,255,.68)}
-.stc.nb .stl svg{stroke:rgba(255,255,255,.68)}
-.stc.nb.dr:hover{background:#0b3668}
-.stc.warn{box-shadow:var(--sh1),inset 3px 0 0 var(--rd)}
-.stv{font-variant-numeric:tabular-nums}
-@keyframes muncul{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-.sts .stc{animation:muncul .35s ease both}
-.sts .stc:nth-child(2){animation-delay:.04s}.sts .stc:nth-child(3){animation-delay:.08s}.sts .stc:nth-child(4){animation-delay:.12s}.sts .stc:nth-child(5){animation-delay:.16s}
-@media (prefers-reduced-motion:reduce){.sts .stc{animation:none}}
-#uNm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bn{font-size:11px;color:var(--lb3);text-align:right;font-variant-numeric:tabular-nums}
 .pg{height:6px;background:var(--surf3);border-radius:3px;overflow:hidden;display:flex}
 .pg span{transition:width .3s}
@@ -1033,7 +1013,7 @@ function labeliTabel(){
 }
 function render(){
  renderNav();$('#pT').textContent=tr(PG[page][0]);$('#pS').textContent=tr(PG[page][1]());
- $('#uNm').textContent=USER.nama;$('#uNm').title=USER.nama;$('#uNm').title=USER.nama;$('#uAv').textContent=USER.inisial;
+ $('#uNm').textContent=USER.nama;$('#uNm').title=USER.nama;$('#uAv').textContent=USER.inisial;
  $('#uRl').innerHTML=`${USER.pemilik?'Master':tr(es(PERAN[USER.peran].n))}<svg viewBox="0 0 24 24" style="width:9px;height:9px;stroke:var(--lb4);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"/></svg>`;
  $('#addB').style.display=can('editFin')||can('master')?'':'none';
  $$('#lng span').forEach(e=>e.classList.toggle('on',e.dataset.l===LANG));
@@ -1046,7 +1026,6 @@ function render(){
 }
 
 /* ═══════ VIEWS ═══════ */
-function sapa(){const h=new Date().getHours();return h<11?'Selamat pagi':h<15?'Selamat siang':h<18?'Selamat sore':'Selamat malam'}
 function vDash(){
  const as=aktifAset(),ak=as.filter(x=>x.stat!=='HILANG');
  const nb=ak.reduce((s,x)=>s+x.nb,0),hp=ak.reduce((s,x)=>s+x.harga,0);
@@ -1060,18 +1039,17 @@ function vDash(){
   ...rw.filter(m=>dy(m.jadwal,TODAY)<=7).map(m=>({i:'wrench',t:namaAset(m.kode),s:`${m.kode} · ${m.ket}`,r:pl('a',ds(m.jadwal))})),
   ...as.filter(x=>x.stat==='HILANG').map(x=>({i:'scan',t:x.nama,s:`${x.kode} · tidak ditemukan saat opname`,r:pl('r','hilang')}))].slice(0,6);
  return`
- <div class="hero">
-  <svg viewBox="0 0 340 340" aria-hidden="true" fill="none" stroke="#fff" stroke-opacity=".13" stroke-width="1.2"><circle cx="170" cy="170" r="70"/><circle cx="170" cy="170" r="115" stroke-dasharray="2 8"/><circle cx="170" cy="170" r="160"/><path d="M170 10A160 160 0 0 1 330 170" stroke="#F97D05" stroke-opacity=".9" stroke-width="2.2" stroke-linecap="round"/></svg>
-  <div class="hk"><h2>${sapa()}, ${es(USER.nama.split(' ')[0])}</h2>
-  <p>${ak.length} aset aktif${rsk?` · ${rsk} perlu tindakan`:''}${out.length?` · ${out.length} sedang dipinjam`:''}</p></div>
-  ${rk||!DB.rekon?`<button class="chip" data-go="rekon"><i></i>${rk?`Rekonsiliasi ${DB.rekon.periode}: ${rk} temuan`:'Belum ada rekonsiliasi bulan ini'}</button>`:''}
- </div>
+ ${rk||!DB.rekon?`<div class="cd" style="background:var(--amB);box-shadow:none"><div class="rw" style="border:none;padding:10px 14px">
+  <div class="ric" style="background:rgba(255,255,255,.55)">${ic('alert','',)}</div>
+  <div class="rm"><div class="rt" style="color:var(--am)">${rk?`Rekonsiliasi ${DB.rekon.periode} menyisakan ${rk} temuan`:'Belum ada rekonsiliasi bulan ini'}</div>
+  <div class="rs" style="color:var(--am);opacity:.8">${rk?'Selesaikan sebelum ditandai tuntas':'Data finansial mengacu snapshot terakhir'}</div></div>
+  <button class="b s" data-go="rekon">Buka</button></div></div>`:''}
  <div class="sts">
   <div class="stc dr" data-dr="aktif"><div class="stl">${ic('box')}Aset aktif${cv()}</div><div class="stv">${ak.length}</div><div class="std">dari ${tot} terdaftar</div></div>
-  <div class="stc nb dr" data-dr="nb"><div class="stl">${ic('money')}Nilai buku${cv()}</div><div class="stv">${rpk(nb)}</div><div class="std">perolehan ${rpk(hp)}</div></div>
+  <div class="stc dr" data-dr="nb"><div class="stl">${ic('money')}Nilai buku${cv()}</div><div class="stv">${rpk(nb)}</div><div class="std">perolehan ${rpk(hp)}</div></div>
   <div class="stc dr" data-dr="pinjam"><div class="stl">${ic('swap')}Sedang dipinjam${cv()}</div><div class="stv">${out.length}</div><div class="std ${lt.length?'r':''}">${lt.length} lewat jatuh tempo</div></div>
   <div class="stc dr" data-dr="rawat"><div class="stl">${ic('wrench')}Perawatan aktif${cv()}</div><div class="stv">${rw.length}</div><div class="std">${rw.filter(m=>dy(m.jadwal,TODAY)<=7).length} jatuh tempo pekan ini</div></div>
-  <div class="stc dr${rsk?' warn':''}" data-dr="rusak"><div class="stl">${ic('alert')}Bermasalah${cv()}</div><div class="stv" style="${rsk?'color:var(--rd)':''}">${rsk}</div><div class="std">rusak atau hilang</div></div>
+  <div class="stc dr" data-dr="rusak"><div class="stl">${ic('alert')}Bermasalah${cv()}</div><div class="stv" style="${rsk?'color:var(--rd)':''}">${rsk}</div><div class="std">rusak atau hilang</div></div>
  </div>
  <div class="g2">
   <div><div class="gh">Komposisi</div><div class="cd"><div class="cdh"><div class="cdt">Aset per kategori</div><span style="font-size:11.5px;color:var(--lb3)">${tot} unit</span></div><div class="cdb">
