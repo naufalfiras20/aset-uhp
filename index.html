@@ -3270,9 +3270,50 @@ function tampilkanLogin(pesan) {
   el.id = 'gerbang';
   el.style.cssText = 'position:fixed;inset:0;background:#f6f6f8;display:flex;align-items:center;'
     + 'justify-content:center;z-index:999;font:14px/1.55 -apple-system,BlinkMacSystemFont,system-ui,sans-serif';
+  el.style.overflow = 'hidden';
   el.innerHTML = `
-  <div style="width:100%;max-width:340px;padding:28px;background:#fff;border-radius:14px;
-    box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <style>
+    @keyframes gPutar{to{transform:rotate(360deg)}}
+    @keyframes gPutarBalik{to{transform:rotate(-360deg)}}
+    @keyframes gNapas{0%,100%{opacity:.55}50%{opacity:1}}
+    #gerbang .gr{transform-box:fill-box;transform-origin:center}
+    @media (prefers-reduced-motion:reduce){#gerbang .gr,#gerbang .gn{animation:none!important}}
+  </style>
+  <svg aria-hidden="true" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"
+    style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
+    <defs>
+      <pattern id="gTitik" width="28" height="28" patternUnits="userSpaceOnUse">
+        <circle cx="1.5" cy="1.5" r="1.2" fill="#072B54" fill-opacity=".13"/></pattern>
+      <radialGradient id="gMasker" cx="50%" cy="50%" r="60%">
+        <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".55" stop-color="#fff" stop-opacity=".9"/>
+        <stop offset="1" stop-color="#fff"/></radialGradient>
+      <mask id="gM"><rect width="1600" height="900" fill="url(#gMasker)"/></mask>
+      <radialGradient id="gCahaya" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="#F97D05" stop-opacity=".16"/><stop offset="1" stop-color="#F97D05" stop-opacity="0"/></radialGradient>
+      <radialGradient id="gBiru" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="#072B54" stop-opacity=".16"/><stop offset="1" stop-color="#072B54" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="1600" height="900" fill="url(#gTitik)" mask="url(#gM)"/>
+    <circle cx="1380" cy="130" r="420" fill="url(#gCahaya)"/>
+    <circle cx="170" cy="800" r="480" fill="url(#gBiru)"/>
+    <g fill="none" stroke="#072B54" stroke-opacity=".16" stroke-width="1.2">
+      <g class="gr" style="animation:gPutar 160s linear infinite">
+        <circle cx="1330" cy="160" r="120"/><circle cx="1330" cy="160" r="200" stroke-dasharray="2 9"/>
+        <circle cx="1330" cy="160" r="290"/><circle cx="1330" cy="160" r="390" stroke-dasharray="40 14"/></g>
+      <g class="gr" style="animation:gPutarBalik 200s linear infinite">
+        <circle cx="220" cy="760" r="150"/><circle cx="220" cy="760" r="250" stroke-dasharray="2 9"/>
+        <circle cx="220" cy="760" r="360"/></g>
+    </g>
+    <g fill="none" stroke="#F97D05" stroke-linecap="round" stroke-width="2.2">
+      <path class="gn" d="M1330 -40 A200 200 0 0 1 1530 160" style="animation:gNapas 7s ease-in-out infinite"/>
+      <path class="gn" d="M220 910 A150 150 0 0 1 70 760" stroke-opacity=".8" style="animation:gNapas 9s ease-in-out infinite"/>
+    </g>
+    <g fill="#F97D05"><circle cx="1210" cy="338" r="4"/><circle cx="1458" cy="276" r="3" fill-opacity=".6"/><circle cx="342" cy="604" r="3.5"/></g>
+    <g stroke="#072B54" stroke-opacity=".14" stroke-width="1.2">
+      <path d="M1150 790h130M1150 806h90M1150 822h130"/><path d="M320 96h130M320 112h90M320 128h130"/></g>
+  </svg>
+  <div style="position:relative;width:100%;max-width:340px;padding:28px;background:#fff;border-radius:14px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06),0 18px 50px rgba(7,43,84,.10)">
     <img src="img/logo-uhp.png" alt="Upscale House Project" style="display:block;width:210px;max-width:100%;height:auto;margin:0 0 22px">
     <h2 style="font-size:17px;margin:0 0 4px;color:#1a1a1a">Aset UHP</h2>
     <p style="color:#8a8a94;font-size:12.5px;margin:0 0 18px">Masuk dengan username dan kata sandi.</p>
