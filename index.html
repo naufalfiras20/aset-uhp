@@ -4099,8 +4099,9 @@ async function kelolaPengguna(){
       ${p.pemilik?'':'<button class="b s pgSandi">Reset sandi</button><button class="b s pgHapus" style="color:var(--rd)">Hapus</button>'}
     </td>
   </tr>`;
-  const legendPeran = Object.entries(PERAN).map(([k,v])=>
-    `<div class="kr"><dt>${es(v.n)}</dt><dd style="font-size:11.5px;color:var(--lb3)">${es(v.d)}</dd></div>`).join('');
+  const legendPeran = [['Master','Akses penuh, plus satu-satunya yang bisa mengelola akun pengguna dan menghapus riwayat sesi opname'],
+      ...Object.values(PERAN).map(v=>[v.n,v.d])].map(([n,d])=>
+    `<div class="kr"><dt>${es(n)}</dt><dd style="font-size:11.5px;color:var(--lb3)">${es(d)}</dd></div>`).join('');
   modal('Kelola pengguna', `
     <p style="font-size:11.5px;color:var(--lb3);margin-bottom:10px;line-height:1.55">Hanya Master
       yang bisa membuat, mengubah akses, mengatur ulang sandi, atau menghapus akun di sini. Pendaftaran
