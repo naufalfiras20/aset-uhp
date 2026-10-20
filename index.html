@@ -389,6 +389,7 @@ align-items:center;justify-content:center}
   });
 })();
 </script>
+<script src="en.js"></script>
 <script src="vendor/qrcode-1.0.0.min.js"></script><script src="vendor/qr-scanner-1.4.2.umd.min.js"></script><script src="vendor/xlsx-0.18.5.full.min.js"></script>
 <script src="vendor/supabase-2.117.2.min.js"></script>
 <script>if(!window.supabase)window.__tampilGalatBoot&&window.__tampilGalatBoot('Pustaka Supabase tidak termuat — periksa koneksi atau versi iOS/Safari (butuh iOS 14 ke atas)');</script>
@@ -577,7 +578,8 @@ const ACC=[
 /* ═══════ BAHASA ═══════
    Lapisan terjemahan: keluaran HTML dilewatkan tr() sebelum ditempel.
    Frasa yang belum ada di kamus tetap tampil Indonesia. */
-let LANG='id';
+let LANG='id';try{if(localStorage.getItem('bahasa')==='en')LANG='en'}catch(e){}
+const LOC=()=>LANG==='en'?'en-GB':'id-ID';
 const KAMUS={
 "terlalu besar untuk label sekarang":"too large for the current label",
 "Satu link hanya boleh untuk satu aset":"One link may belong to only one asset",
@@ -711,20 +713,67 @@ const KAMUS={
 "Sisa manfaat 1–3 tahun":"1–3 years remaining","Sisa manfaat kurang dari 1 tahun":"Less than 1 year remaining",
 "thn":"yr","bln":"mo","Manajemen aset":"Asset management","Laporan":"Reports","Jenis laporan":"Report type","Dari":"From","Sampai":"To","Bulan ini":"This month","Bulan lalu":"Last month","Kuartal ini":"This quarter","Tahun berjalan":"Year to date","Semua":"All","Daftar aset tetap":"Fixed asset register","Beban penyusutan":"Depreciation expense","Penambahan aset":"Asset additions","Mutasi aset":"Asset movements","Status dan kondisi aset":"Asset status and condition","Rekap per departemen":"Summary by department","Riwayat peminjaman":"Borrowing history","Biaya perawatan":"Maintenance cost","Hasil stock opname":"Stock count results","Aset jatuh tempo":"Assets due","Jejak audit":"Audit trail","Asal data":"Data source","Sumber data":"Source","Isi catatan asli":"Original record","Cara hitung":"Calculation","Jejak audit terkait":"Related audit trail","Buka aset":"Open asset","Pindah lokasi":"Location change","Alih departemen":"Department transfer","Ganti pemegang":"Holder change","Perubahan kondisi":"Condition change","Dipinjamkan":"Lent out","Dikembalikan":"Returned","baris":"rows","Klik baris mana pun untuk melihat dari mana angka itu berasal":"Click any row to see where the figure comes from","Pelepasan":"Disposal","Pelepasan aset":"Asset disposal","Lepas aset":"Dispose asset","Dijual":"Sold","Rusak permanen":"Written off","Hilang permanen":"Lost","Dihibahkan":"Donated","Tukar tambah":"Traded in","Laba pelepasan":"Gain on disposal","Rugi pelepasan":"Loss on disposal","Nilai buku saat lepas":"Book value at disposal","Hasil pelepasan":"Disposal proceeds","Impor CSV":"Import CSV","Cetak label":"Print labels","Pindah lokasi":"Move location","Batal pilih":"Clear selection","dipilih":"selected","Garansi":"Warranty","Dokumen":"Documents","Kit":"Kit","berdiri sendiri":"standalone","tidak ada":"none","Siap impor":"Ready","Ditolak":"Rejected","Terbaca":"Parsed","Garansi, dokumen, dan kit":"Warranty, documents, and kit","Aset dilepas":"Disposed assets","Dilepas":"Disposed","Semua kondisi":"All conditions","Kondisi":"Condition","Kondisi aset":"Asset condition","Kondisi fisik":"Physical condition","perlu ditindaklanjuti":"need follow-up","habis":"expired","hari lagi":"days left","Aset bermasalah":"Problem assets","Kondisi selain baik":"Condition other than good"
 };
-const PAIRS=Object.entries(KAMUS).sort((a,b)=>b[0].length-a[0].length);
-function tr(h){if(LANG==='id'||!h)return h;let s=h;for(const[a,b]of PAIRS)if(s.includes(a))s=s.split(a).join(b);return s}
-function setLang(l){LANG=l;document.documentElement.lang=l;log('UBAH','KONFIG','bahasa','Bahasa diubah ke '+(l==='id'?'Indonesia':'English'));render();}
+/* Terjemahan per kalimat utuh (en.js), bukan potongan kata. Teks di antara tag HTML dicocokkan
+   persis; yang berisi angka/nama dicocokkan lewat pola "{}". Yang tidak dikenal dibiarkan apa adanya. */
+const EXACT=new Map(Object.entries(KAMUS)),POLA=[];
+(typeof EN_TEKS!=='undefined'?EN_TEKS:[]).forEach(([a0,b])=>{const a=a0.replace(/\s+/g,' ');
+ if(a.includes('{}')){const re=new RegExp('^'+a.replace(/[.*+?^$()|[\]\\]/g,'\\$&').replace(/\{\}$/,'(.*)').replace(/^\{\}/,'(.*)').replace(/\{\}/g,'(.+?)')+'$');POLA.push([re,b,a.length])}
+ else EXACT.set(a,b)});
+POLA.sort((x,y)=>y[2]-x[2]);
+const deEnt=t=>t.replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+const enEnt=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function trTeks(t){
+ const m=/^(\s*)([\s\S]*?)(\s*)$/.exec(t),c=deEnt(m[2]).replace(/\s+/g,' ');if(!c)return t;
+ const m2=/^([\s\S]*?)([\s·—]*)$/.exec(c);
+ const r=EXACT.has(c)?EXACT.get(c):(m2[2]&&m2[1]?trInti(m2[1])+m2[2]:trInti(c));
+ return r===c?t:m[1]+enEnt(r)+m[3]}
+/* Jaring pengaman: teks yang diisi lewat JS setelah render (pratinjau, pesan dinamis) ikut diterjemahkan */
+let OBS_SIBUK=false;
+function tlsNode(n){
+ if(n.nodeType===3){const p=n.parentElement;if(!p||/^(SCRIPT|STYLE|TEXTAREA|INPUT)$/.test(p.tagName))return;
+  const b=trTeks(n.nodeValue);if(b!==n.nodeValue)n.nodeValue=b;return}
+ if(n.nodeType!==1||/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.tagName))return;
+ const w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT);let x;const ls=[];while(x=w.nextNode())ls.push(x);ls.forEach(tlsNode);
+ [n,...n.querySelectorAll('[title],[placeholder]')].forEach(e=>['title','placeholder'].forEach(at=>{
+  if(e.hasAttribute&&e.hasAttribute(at)){const v=e.getAttribute(at),b=trTeks(v);if(b!==v)e.setAttribute(at,b)}}))}
+new MutationObserver(ms=>{
+ if(LANG==='id'||OBS_SIBUK)return;OBS_SIBUK=true;
+ try{ms.forEach(m=>{if(m.type==='characterData')tlsNode(m.target);else m.addedNodes.forEach(tlsNode)})}finally{OBS_SIBUK=false}
+}).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+function trInti(c){
+ if(EXACT.has(c))return EXACT.get(c);
+ for(const[re,b]of POLA){const k=re.exec(c);if(k&&!(b.includes('[')&&!/^\d+$/.test(k[1].trim()))){let i=0;const n=parseInt(k[1],10);
+  const o=b.replace(/\{\}/g,()=>{const v=k[++i]||'';const q=/^(\s*)([\s\S]*?)(\s*)$/.exec(v);return q[1]+(q[2]?trInti(q[2]):'')+q[3]});
+  return o.replace(/\[([^|\]]*)\|([^\]]*)\]/g,(_,a,b2)=>n===1?a:b2)}}
+ for(const sep of[' · ',' — ']){if(c.includes(sep)){const ps=c.split(sep),ts=ps.map(trInti);if(ts.some((x,i)=>x!==ps[i]))return ts.join(sep)}}
+ return c}
+function tr(h){
+ if(LANG==='id'||!h)return h;
+ return String(h).split(/(<[^>]*>)/).map(x=>x[0]==='<'
+  ?x.replace(/\b(title|placeholder|aria-label)="([^"]*)"/g,(a,n,v)=>n+'="'+trTeks(v).replace(/"/g,'&quot;')+'"')
+  :trTeks(x)).join('')}
+/* Teks yang ada di kerangka halaman (bukan hasil render): diterjemahkan di tempat, aslinya disimpan untuk balik ke Indonesia */
+const ASLI=new WeakMap();
+function terjemahStatis(){
+ const roots=['.sd','.tb','#cm','.mn2 .tba'].flatMap(q=>$$(q));
+ roots.forEach(r=>{
+  const w=document.createTreeWalker(r,NodeFilter.SHOW_TEXT);let n;
+  while(n=w.nextNode()){if(!ASLI.has(n))ASLI.set(n,n.nodeValue);const a=ASLI.get(n);n.nodeValue=LANG==='id'?a:trTeks(a)}
+  r.querySelectorAll('[title],[placeholder]').forEach(e=>['title','placeholder'].forEach(at=>{
+   if(!e.hasAttribute(at))return;const k='_a_'+at;if(!(k in e))e[k]=e.getAttribute(at);
+   e.setAttribute(at,LANG==='id'?e[k]:trTeks(e[k]))}))})}
+function setLang(l){LANG=l;setBulan();try{localStorage.setItem('bahasa',l)}catch(e){}document.documentElement.lang=l;log('UBAH','KONFIG','bahasa','Bahasa diubah ke '+(l==='id'?'Indonesia':'English'));render();}
 
 /* ═══════ UTIL ═══════ */
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const rp=n=>'Rp '+Math.round(n).toLocaleString('id-ID');
-const rpk=n=>'Rp '+(n>=1e9?(n/1e9).toFixed(2).replace('.',',')+' M':n>=1e6?Math.round(n/1e6)+' jt':Math.round(n).toLocaleString('id-ID'));
+const rp=n=>'Rp '+Math.round(n).toLocaleString(LOC());
+const rpk=n=>'Rp '+(n>=1e9?(n/1e9).toFixed(2).replace('.',LANG==='en'?'.':',')+(LANG==='en'?' bn':' M'):n>=1e6?Math.round(n/1e6)+(LANG==='en'?' mn':' jt'):Math.round(n).toLocaleString(LOC()));
 /* Tanggal dari Supabase kadang masih berupa string kalau namanya belum
    terdaftar di TGL_FIELD. Formatter tampilan tidak boleh sampai melempar
    error — satu field yang lolos jangan sampai merobohkan seluruh render. */
 const keTgl=d=>d instanceof Date?(isNaN(d)?null:d):(d?(x=>isNaN(x)?null:x)(new Date(d)):null);
-const dt=d=>{const v=keTgl(d);return v?v.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—'};
-const ds=d=>{const v=keTgl(d);return v?v.toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—'};
+const dt=d=>{const v=keTgl(d);return v?v.toLocaleDateString(LOC(),{day:'numeric',month:'short',year:'numeric'}):'—'};
+const ds=d=>{const v=keTgl(d);return v?v.toLocaleDateString(LOC(),{day:'numeric',month:'short'}):'—'};
 const dy=(x,y)=>Math.round((x-y)/864e5);
 const nm=(arr,k)=>(DB[arr].find(x=>x.k===k)||{}).n||k;
 const dn=k=>nm('dept',k),kn=k=>nm('kat',k),ln=k=>nm('lok',k);
@@ -873,7 +922,7 @@ function drillKond(kk){
    <thead><tr><th style="width:104px">Kode</th><th>Aset</th><th style="width:96px">Status</th><th style="width:104px" class="nu">Nilai buku</th></tr></thead>
    <tbody>${r.map(x=>`<tr class="ck" data-k="${x.kode}"><td class="mn">${x.kode}</td>
    <td><div class="c1">${es(x.nama)}</div><div class="c2">${es(kn(x.kat))} · ${es(ln(x.lok))}${x.pic?' · '+es(x.pic):''}</div></td>
-   <td>${stx(x.stat)}</td><td class="nu">${Math.round(x.nb).toLocaleString('id-ID')}</td></tr>`).join('')}</tbody></table></div>
+   <td>${stx(x.stat)}</td><td class="nu">${Math.round(x.nb).toLocaleString(LOC())}</td></tr>`).join('')}</tbody></table></div>
    <div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:.5px solid var(--sep);margin-top:2px;font-size:12.5px"><span style="color:var(--lb3)">Total nilai buku</span><b>${rp(r.reduce((s,y)=>s+y.nb,0))}</b></div>`:
    `<div class="emp">${ic('check')}<b>Tidak ada aset</b><span>Tidak ada aset berkondisi ini.</span></div>`}`,
   `<button class="b" onclick="closeAll()">Tutup</button>`,540);
@@ -887,7 +936,7 @@ function drillAge(b){
    <tbody>${r.map(x=>{const s=sisa(x),t=Math.floor(s/12),m=s%12;
     return`<tr class="ck" data-k="${x.kode}"><td class="mn">${x.kode}</td>
     <td><div class="c1">${es(x.nama)}</div><div class="c2">${es(kn(x.kat))} · perolehan ${ds(x.tgl)}</div></td>
-    <td>${kox(x.kond)}</td><td>${s?`${t?t+' thn ':''}${m} bln`:pl('r','habis')}</td><td class="nu">${Math.round(x.nb).toLocaleString('id-ID')}</td></tr>`}).join('')}</tbody></table></div>
+    <td>${kox(x.kond)}</td><td>${s?`${t?t+' thn ':''}${m} bln`:pl('r','habis')}</td><td class="nu">${Math.round(x.nb).toLocaleString(LOC())}</td></tr>`}).join('')}</tbody></table></div>
    <div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:.5px solid var(--sep);margin-top:2px;font-size:12.5px"><span style="color:var(--lb3)">Total nilai buku</span><b>${rp(r.reduce((s,y)=>s+y.nb,0))}</b></div>`:
    `<div class="emp">${ic('check')}<b>Tidak ada aset</b><span>Kelompok umur ini kosong.</span></div>`}`,
   `<button class="b" onclick="closeAll()">Tutup</button>`,540);
@@ -1022,6 +1071,7 @@ function render(){
   log('UBAH','KONFIG','peran','Peran diubah ke '+PERAN[USER.peran].n);toast('Peran: '+PERAN[USER.peran].n,'g');closeAll();render()});
  const c=$('#ct');c.innerHTML=tr(({dash:vDash,reg:vReg,pinjam:vPinjam,rawat:vRawat,opname:vOpname,rekon:vRekon,master:vMaster,audit:vAudit,about:vAbout,lepas:vLepas,lap:vLap})[page]());
  c.classList.remove('fade');void c.offsetWidth;c.classList.add('fade');
+ terjemahStatis();
  bind();
  if(page!==RENDER_PAGE_TERAKHIR){$('.scr').scrollTop=0;RENDER_PAGE_TERAKHIR=page}
 }
@@ -1076,7 +1126,7 @@ function vDash(){
    `<div class="emp">${ic('check')}<b>Semua terkendali</b><span>Tidak ada pinjaman telat atau aset bermasalah.</span></div>`}
   </div></div>
   <div><div class="gh">Aktivitas</div><div class="cd"><div class="cdb">
-   ${DB.audit.length?`<div class="tl">${DB.audit.slice(0,6).map((l,i)=>`<div class="ti ${i?'':'n'}"><div class="tt">${es(l.k)}</div><div class="ts2">${l.u} · ${l.w.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</div></div>`).join('')}</div>`:
+   ${DB.audit.length?`<div class="tl">${DB.audit.slice(0,6).map((l,i)=>`<div class="ti ${i?'':'n'}"><div class="tt">${es(l.k)}</div><div class="ts2">${l.u} · ${l.w.toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit'})}</div></div>`).join('')}</div>`:
    `<div class="emp" style="padding:24px 10px">${ic('clock')}<b>Belum ada aktivitas</b><span>Coba pinjam gear atau jalankan opname.</span></div>`}
   </div></div></div>
  </div>`;
@@ -1128,7 +1178,7 @@ function kolRegDaftar(){
   {k:'tempel',l:'Ditempel',th:()=>`<th style="width:64px">Ditempel</th>`,td:x=>`<td>${x.ditempel?`<span title="Sudah ditempel — ${dt(x.ditempelTgl)}${x.ditempelOleh?' · '+es(x.ditempelOleh):''}. Klik untuk batalkan." style="color:var(--gr);font-size:13px;cursor:pointer" data-tt="${x.kode}">●</span>`:!x.dicetak?'<span style="color:var(--lb4)" title="Cetak labelnya dulu sebelum bisa ditandai ditempel">—</span>':can('editOps')||can('master')?`<button class="b s" data-tt="${x.kode}" style="padding:1px 6px;font-size:10.5px" title="Tandai sudah ditempel">Tandai</button>`:'<span style="color:var(--lb4)">—</span>'}</td>`},
   {k:'stat',l:'Status',th:()=>`<th>Status</th>`,td:(x,l,tl)=>`<td>${tl?pl('r','Telat '+late(l)+' hari'):stx(x.stat)}</td>`},
  ];
- if(can('lihatFin')) semua.push({k:'nb',l:'Nilai buku',th:()=>`<th class="nu">Nilai buku</th>`,td:x=>`<td class="nu">${x.nb?Math.round(x.nb).toLocaleString('id-ID'):'<span style="color:var(--lb4)">0</span>'}</td>`});
+ if(can('lihatFin')) semua.push({k:'nb',l:'Nilai buku',th:()=>`<th class="nu">Nilai buku</th>`,td:x=>`<td class="nu">${x.nb?Math.round(x.nb).toLocaleString(LOC()):'<span style="color:var(--lb4)">0</span>'}</td>`});
  return semua;
 }
 function vReg(){
@@ -1296,6 +1346,9 @@ function vRiwayatPinjam(){
 /* ═══════ PERAWATAN: checklist, jadwal tahunan, jadwal berulang ═══════ */
 const BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 const BLN_PANJANG=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const BLN_ID=[...BLN],BLN_PANJANG_ID=[...BLN_PANJANG];
+const BLN_EN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],BLN_PANJANG_EN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function setBulan(){for(let i=0;i<12;i++){BLN[i]=(LANG==='en'?BLN_EN:BLN_ID)[i];BLN_PANJANG[i]=(LANG==='en'?BLN_PANJANG_EN:BLN_PANJANG_ID)[i]}}
 let RW={tab:'tugas',thn:new Date().getFullYear(),status:'belum',bulan:'',q:''};
 function blnLabel(per){const [y,m]=per.split('-');return BLN[+m-1]+' '+y}
 function akhirBulan(per){const [y,m]=per.split('-').map(Number);return new Date(y,m,0,23,59,59)}
@@ -1371,7 +1424,7 @@ function vRawatTugas(){
   <td><span class="tag">${m.jenis[0]+m.jenis.slice(1).toLowerCase()}</span></td>
   <td>${sel?`<span style="color:var(--gr)">${dt(m.pelaksanaan)}</span><div class="c2">jadwal ${es(rwJadwalTeks(m))}</div>`:tl?`<span style="color:var(--rd)">${es(rwJadwalTeks(m))}</span><div class="c2" style="color:var(--rd)">terlambat</div>`:es(rwJadwalTeks(m))}</td>
   <td style="font-size:12px">${vNama(m)}</td><td style="font-size:12px;white-space:nowrap">${vTelp(m)}</td><td style="font-size:12px">${vAlamat(m)}</td>
-  <td class="nu">${m.biaya?m.biaya.toLocaleString('id-ID'):'<span style="color:var(--lb4)">0</span>'}</td>
+  <td class="nu">${m.biaya?m.biaya.toLocaleString(LOC()):'<span style="color:var(--lb4)">0</span>'}</td>
   <td>${can('rawat')?`<button class="ibt" data-rwedit="${m.id}" title="Ubah">${ic('edit')}</button>`:''}</td></tr>`}).join(''):
   `<tr><td colspan="9"><div class="emp">${ic('check')}<b>Tidak ada tugas</b><span>${RW.status==='belum'?'Semua perawatan sudah dicentang selesai.':'Tidak ada yang cocok dengan filter ini.'}</span></div></td></tr>`}
  </tbody></table></div>`;
@@ -1404,7 +1457,7 @@ function vRawatRutin(){
   <td>${es(r.jenis[0]+r.jenis.slice(1).toLowerCase())}<div class="c2">${rutinPola(r)} · tiap tanggal ${r.mulai.getUTCDate()}</div><div class="c2">mulai ${dt(r.mulai)}</div>${r.aktif?'':'<div class="c2">nonaktif</div>'}</td>
   <td style="font-size:12px">${rutinBulan(r,th).map(i=>Math.min(r.mulai.getUTCDate(),new Date(th,i+1,0).getDate())+' '+BLN[i]).join(', ')||'<span style="color:var(--lb4)">—</span>'}<div class="c2">${sel} dari ${tot} tugas selesai</div></td>
   <td style="font-size:12px">${vNama(r)}</td><td style="font-size:12px;white-space:nowrap">${vTelp(r)}</td><td style="font-size:12px">${vAlamat(r)}</td>
-  <td class="nu">${r.biaya?r.biaya.toLocaleString('id-ID'):'<span style="color:var(--lb4)">0</span>'}</td>
+  <td class="nu">${r.biaya?r.biaya.toLocaleString(LOC()):'<span style="color:var(--lb4)">0</span>'}</td>
   <td>${can('rawat')?`<button class="ibt" data-rtedit="${r.id}" title="Ubah jadwal berulang">${ic('edit')}</button>`:''}</td></tr>`}).join('')}</tbody></table></div>`;
 }
 
@@ -1576,7 +1629,7 @@ function vRiwayatSesi(){
    <td>${o.uji?pl('a','Uji coba'):pl('g','Sungguhan')}</td>
    <td style="font-size:12px">${c('DITEMUKAN')} sesuai · ${c('LOKASI_BEDA')} beda lokasi · ${c('TIDAK_DITEMUKAN')} tidak ditemukan</td>
    ${pemilik?`<td><button class="b s d" data-hso="${o.id}" title="Hapus riwayat sesi ini permanen">${ic('trash')}</button></td>`:''}</tr>`}).join('')}</tbody></table></div>
- <p style="font-size:11.5px;color:var(--lb3);margin-top:9px;line-height:1.55">Sesi <b>uji coba</b> tidak dihitung sebagai sudah di-SO dan tidak muncul di laporan hasil opname.${pemilik?' Sesi yang salah bisa dihapus permanen.':''}</p>`;
+ <p style="font-size:11.5px;color:var(--lb3);margin-top:9px;line-height:1.55"><b>Sesi uji coba</b> tidak dihitung sebagai sudah di-SO dan tidak muncul di laporan hasil opname.${pemilik?' Sesi yang salah bisa dihapus permanen.':''}</p>`;
 }
 function hapusSesiSO(id){
  const o=DB.opnameArsip.find(x=>x.id===id);if(!o)return;
@@ -1640,7 +1693,7 @@ function vRekon(){
  const D=[['T1','Ada di Accurate, belum ada di aplikasi'],['T2','Ada di aplikasi, tidak ada di Accurate'],['T3','Cocok, tapi nama berbeda'],['T4','Nilai finansial diperbarui otomatis']];
  return`
  <div class="cd"><div class="cdh">
-  <div><div class="cdt">Rekonsiliasi ${r.periode}</div><div style="font-size:11px;color:var(--lb3);margin-top:1px">Daftar Aset Tetap — Accurate Online.xlsx · ${r.w.toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div>
+  <div><div class="cdt">Rekonsiliasi ${r.periode}</div><div style="font-size:11px;color:var(--lb3);margin-top:1px">Daftar Aset Tetap — Accurate Online.xlsx · ${r.w.toLocaleString(LOC(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div>
   ${ss?pl('a',ss+' temuan belum selesai'):`<div style="display:flex;gap:8px;align-items:center">${pl('g','Semua selesai')}<button class="b s p" id="finR">Tandai tuntas</button></div>`}
  </div><div class="cdb" style="display:flex;gap:26px;flex-wrap:wrap">
   <div><div style="font-size:11px;color:var(--lb3)">Di Accurate</div><div style="font-size:17px;font-weight:600;margin-top:1px">${r.nA}</div></div>
@@ -1785,7 +1838,7 @@ function vAudit(){
  if(!DB.audit.length)return`<div class="cd"><div class="emp">${ic('clock')}<b>Log masih kosong</b><span>Setiap perubahan akan tercatat di sini — siapa, kapan, dan apa yang berubah.</span></div></div>`;
  return`<div class="cd" style="margin:0"><table>
  <thead><tr><th style="width:128px">Waktu</th><th style="width:72px">Pengguna</th><th style="width:74px">Aksi</th><th style="width:82px">Entitas</th><th>Keterangan</th></tr></thead>
- <tbody>${DB.audit.map(l=>`<tr><td class="mn">${l.w.toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td><td>${l.u}</td><td><span class="tag">${l.a}</span></td><td class="mn">${l.e}</td><td>${es(l.k)}</td></tr>`).join('')}
+ <tbody>${DB.audit.map(l=>`<tr><td class="mn">${l.w.toLocaleString(LOC(),{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td><td>${l.u}</td><td><span class="tag">${l.a}</span></td><td class="mn">${l.e}</td><td>${es(l.k)}</td></tr>`).join('')}
  </tbody></table></div>`;
 }
 
@@ -2215,10 +2268,10 @@ function jadwalSusut(k){
   <div style="max-height:46vh;overflow-y:auto;margin:0 -16px"><table>
    <thead><tr><th style="width:38px">#</th><th style="width:88px">Periode</th><th class="nu">Beban</th><th class="nu">Akumulasi</th><th class="nu">Nilai buku</th></tr></thead>
    <tbody>${rows.map(r=>`<tr style="${r.lalu?'':'opacity:.45'}"><td class="mn">${r.i}</td>
-   <td>${r.d.toLocaleDateString('id-ID',{month:'short',year:'2-digit'})}</td>
-   <td class="nu">${Math.round(r.b).toLocaleString('id-ID')}</td>
-   <td class="nu">${Math.round(r.ak).toLocaleString('id-ID')}</td>
-   <td class="nu">${Math.round(r.nb).toLocaleString('id-ID')}</td></tr>`).join('')}</tbody></table></div>
+   <td>${r.d.toLocaleDateString(LOC(),{month:'short',year:'2-digit'})}</td>
+   <td class="nu">${Math.round(r.b).toLocaleString(LOC())}</td>
+   <td class="nu">${Math.round(r.ak).toLocaleString(LOC())}</td>
+   <td class="nu">${Math.round(r.nb).toLocaleString(LOC())}</td></tr>`).join('')}</tbody></table></div>
   <p style="font-size:11.5px;color:var(--lb3);margin-top:10px;line-height:1.55">Baris redup belum terjadi. Nilai buku berhenti di ${rp(x.residu||0)}${x.residu?' (nilai residu)':''}.</p>`,
   `<button class="b" onclick="closeAll()">Tutup</button>`,560);
 }
@@ -2660,9 +2713,9 @@ function vLepas(){
   return`<tr class="ck" data-k="${x.kode}"><td class="mn">${x.kode}</td>
   <td><div class="c1">${es(x.nama)}</div><div class="c2">${es(x.lepas.ket)}</div></td>
   <td><span class="tag">${JLEPAS[x.lepas.jenis]}</span></td><td>${ds(x.lepas.tgl)}</td>
-  <td class="nu">${Math.round(x.lepas.nbSaat).toLocaleString('id-ID')}</td>
-  <td class="nu">${Math.round(x.lepas.nilai).toLocaleString('id-ID')}</td>
-  <td class="nu" style="color:${s>0?'var(--gr)':s<0?'var(--rd)':'var(--lb3)'}">${s>0?'+':''}${Math.round(s).toLocaleString('id-ID')}</td>
+  <td class="nu">${Math.round(x.lepas.nbSaat).toLocaleString(LOC())}</td>
+  <td class="nu">${Math.round(x.lepas.nilai).toLocaleString(LOC())}</td>
+  <td class="nu" style="color:${s>0?'var(--gr)':s<0?'var(--rd)':'var(--lb3)'}">${s>0?'+':''}${Math.round(s).toLocaleString(LOC())}</td>
   ${can('hapusAset')?`<td><button class="ibt" data-hp="${x.kode}" title="Hapus permanen" style="color:var(--rd)">${ic('trash')}</button></td>`:''}</tr>`}).join(''):
   `<tr><td colspan="${can('hapusAset')?8:7}"><div class="emp">${ic('box')}<b>Belum ada aset dilepas</b><span>Aset yang dijual, rusak permanen, atau hilang akan tercatat di sini.</span></div></td></tr>`}
  </tbody></table></div>
@@ -2989,7 +3042,7 @@ const LAPORAN={
  audit:{n:'Jejak audit',d:'Seluruh perubahan data dalam periode',per:true,
   kol:[{h:'Waktu',w:132},{h:'Pengguna',w:88},{h:'Aksi',w:80},{h:'Entitas',w:80},{h:'Keterangan'}],
   f:(a,b)=>DB.audit.filter(l=>dlm(l.w,a,b))
-   .map(l=>({c:[l.w.toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),l.u,l.a,l.e,l.k],
+   .map(l=>({c:[l.w.toLocaleString(LOC(),{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),l.u,l.a,l.e,l.k],
     src:{t:'audit',kode:l.i,ref:l}}))}
 };
 function lapData(){
@@ -3024,11 +3077,11 @@ function vLap(){
   <thead><tr>${L.kol.map(k=>`<th ${k.w?`style="width:${k.w}px"`:''} class="${k.nu?'nu':''}">${k.h}</th>`).join('')}</tr></thead>
   <tbody>${rows.length?rows.map((r,i)=>`<tr class="ck" data-lap="${i}">${r.c.map((v,j)=>{
    const k=L.kol[j],[t1,t2]=String(v).split('|');
-   return`<td class="${k.nu?'nu':''}">${k.nu?(typeof v==='number'?Math.round(v).toLocaleString('id-ID'):es(v)):
+   return`<td class="${k.nu?'nu':''}">${k.nu?(typeof v==='number'?Math.round(v).toLocaleString(LOC()):es(v)):
     (t2?`<div class="c1">${es(t1)}</div><div class="c2">${es(t2)}</div>`:es(t1))}</td>`}).join('')}</tr>`).join(''):
   `<tr><td colspan="${L.kol.length}"><div class="emp">${ic('search')}<b>Tidak ada data</b><span>Tidak ada catatan yang cocok dengan periode dan filter ini.</span></div></td></tr>`}
   </tbody>
-  ${rows.length&&L.tot?`<tfoot><tr style="background:var(--surf2);font-weight:600">${L.kol.map((k,j)=>`<td class="${k.nu?'nu':''}" style="border-top:1px solid var(--sep2)">${j===0?'Total':(tot[j]!==undefined?Math.round(tot[j]).toLocaleString('id-ID'):'')}</td>`).join('')}</tr></tfoot>`:''}
+  ${rows.length&&L.tot?`<tfoot><tr style="background:var(--surf2);font-weight:600">${L.kol.map((k,j)=>`<td class="${k.nu?'nu':''}" style="border-top:1px solid var(--sep2)">${j===0?'Total':(tot[j]!==undefined?Math.round(tot[j]).toLocaleString(LOC()):'')}</td>`).join('')}</tr></tfoot>`:''}
  </table></div>
  <p style="font-size:11.5px;color:var(--lb3);margin-top:9px">Klik baris mana pun untuk melihat dari mana angka itu berasal.</p>`;
 }
@@ -3040,7 +3093,7 @@ function asalData(i){
   if(v instanceof Date)return dt(v);
   if(Array.isArray(v))return v.length>6?v.slice(0,6).join(', ')+` … (${v.length})`:v.join(', ');
   if(typeof v==='object')return '{…}';
-  if(typeof v==='number')return v.toLocaleString('id-ID');
+  if(typeof v==='number')return v.toLocaleString(LOC());
   return String(v)};
  const skip=['dok','detail','lepas'];
  const jejak=r.src.kode?DB.audit.filter(l=>l.i===r.src.kode).slice(0,5):[];
@@ -3060,7 +3113,7 @@ function asalData(i){
   </div>
   ${jejak.length?`<div class="sct" style="margin-top:15px">Jejak audit terkait</div>
    <div class="tl" style="margin-top:4px">${jejak.map((l,z)=>`<div class="ti ${z?'':'n'}"><div class="tt" style="white-space:normal;line-height:1.45">${es(l.k)}</div>
-   <div class="ts2">${l.u} · ${l.w.toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div>`).join('')}</div>`:''}`,
+   <div class="ts2">${l.u} · ${l.w.toLocaleString(LOC(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div>`).join('')}</div>`:''}`,
   `<button class="b" onclick="closeAll()">Tutup</button>${x?`<button class="b n" onclick="closeAll();openAsset('${r.src.kode}')">Buka aset</button>`:''}`,540);
 }
 function lapCsv(){
@@ -3181,7 +3234,7 @@ function bind(){
     const uji=jenis==='UJI',semua=oL.value==='__ALL__'&&!uji;
     if(oAllW)oAllW.style.display=semua?'':'none';
     const aw=$('#oAckWrap');if(aw)aw.style.display=uji?'none':'';
-    const semuaOk=!semua||(oAllC&&oAllC.value.trim().toUpperCase()==='SEMUA');
+    const semuaOk=!semua||(oAllC&&['SEMUA','ALL'].includes(oAllC.value.trim().toUpperCase()));
     stO.disabled=!(jenis&&oL.value&&(uji||oAck.checked)&&semuaOk);
     stO.textContent=uji?'Buka sesi uji coba':'Buka sesi';
    };
@@ -4247,6 +4300,7 @@ async function keluarSesi(){
 
 /* ── 11. Titik masuk — beda dari versi Apps Script: cek sesi dulu ── */
 async function mulaiSetelahLogin(){
+  setBulan();document.documentElement.lang=LANG;
   try{
     try{ await supa.rpc('rpc_isi_rutin'); }catch(e){ console.warn('isi tugas perawatan berulang gagal', e); }
     await muatUlang();
