@@ -1012,7 +1012,7 @@ function labeliTabel(){
 function render(){
  renderNav();$('#pT').textContent=tr(PG[page][0]);$('#pS').textContent=tr(PG[page][1]());
  $('#uNm').textContent=USER.nama;$('#uAv').textContent=USER.inisial;
- $('#uRl').innerHTML=`${tr(es(PERAN[USER.peran].n))}<svg viewBox="0 0 24 24" style="width:9px;height:9px;stroke:var(--lb4);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"/></svg>`;
+ $('#uRl').innerHTML=`${USER.pemilik?'Master':tr(es(PERAN[USER.peran].n))}<svg viewBox="0 0 24 24" style="width:9px;height:9px;stroke:var(--lb4);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"/></svg>`;
  $('#addB').style.display=can('editFin')||can('master')?'':'none';
  $$('#lng span').forEach(e=>e.classList.toggle('on',e.dataset.l===LANG));
  $$('[data-peran]').forEach(e=>e.onclick=()=>{USER.peran=e.dataset.peran;
@@ -1752,7 +1752,7 @@ function vAbout(){
    'Harga, penyusutan, dan nilai buku dihitung di sini dari harga perolehan, masa manfaat, dan nilai residu. Angka resminya tetap di Accurate.',
    'QR di label berisi kode aset. Kode yang sama dipakai saat ekspor ke Accurate.',
    'Setiap perubahan masuk Log audit: siapa, kapan, apa yang berubah.',
-   'Akun pengguna hanya bisa dibuat, diubah, dan dihapus oleh pemilik akun.'];
+   'Akun pengguna hanya bisa dibuat, diubah, dan dihapus oleh Master.'];
   return`
   <div style="max-width:660px">
    <div class="cd"><div class="cdb" style="padding:20px 22px">
@@ -3287,8 +3287,8 @@ function tampilkanLogin(pesan) {
       font-size:13.5px;margin-bottom:14px">
     <button id="gMasuk" style="width:100%;padding:10px;border:none;border-radius:9px;background:#072B54;
       color:#fff;font-size:13.5px;font-weight:500;cursor:pointer;margin-bottom:8px">Masuk</button>
-    <p style="font-size:11.5px;color:#8a8a94;margin:14px 0 0;line-height:1.6">Belum punya akun? Pendaftaran
-      mandiri sudah dimatikan — hubungi pemilik akun untuk dibuatkan akun baru.</p>
+    <p style="font-size:11.5px;color:#8a8a94;margin:14px 0 0;line-height:1.6">Akun dibuat oleh Master. Tidak ada pendaftaran mandiri.
+      Jika belum memiliki akun, silakan hubungi Master.</p>
   </div>`;
   document.body.appendChild(el);
 
@@ -4084,12 +4084,12 @@ async function panggilKelolaAkun(body){
   return data;
 }
 async function kelolaPengguna(){
-  if(!USER.pemilik) return toast('Hanya pemilik akun yang bisa mengelola pengguna','r');
+  if(!USER.pemilik) return toast('Hanya Master yang bisa mengelola pengguna','r');
   let daftar;
   try{ daftar = await srv('apiDaftarPengguna'); }
   catch(e){ return toast(e.message,'r'); }
   const baris = p => `<tr data-username="${es(p.username)}">
-    <td><input class="in pgU" value="${es(p.username)}" style="width:120px" minlength="6" maxlength="18" ${p.pemilik?'disabled':''}>${p.pemilik?' <span style="color:var(--lb4);font-size:10.5px">(pemilik)</span>':''}</td>
+    <td><input class="in pgU" value="${es(p.username)}" style="width:120px" minlength="6" maxlength="18" ${p.pemilik?'disabled':''}>${p.pemilik?' <span style="color:var(--lb4);font-size:10.5px">(Master)</span>':''}</td>
     <td><input class="in pgN" value="${es(p.nama)}" style="width:120px" ${p.pemilik?'disabled':''}></td>
     <td><select class="in pgP" ${p.pemilik?'disabled':''}>${['ADMIN','AKUNTANSI','PETUGAS','PENGAMAT','PIC'].map(x=>
       `<option value="${x}" ${p.peran===x?'selected':''}>${x}</option>`).join('')}</select></td>
@@ -4102,7 +4102,7 @@ async function kelolaPengguna(){
   const legendPeran = Object.entries(PERAN).map(([k,v])=>
     `<div class="kr"><dt>${es(v.n)}</dt><dd style="font-size:11.5px;color:var(--lb3)">${es(v.d)}</dd></div>`).join('');
   modal('Kelola pengguna', `
-    <p style="font-size:11.5px;color:var(--lb3);margin-bottom:10px;line-height:1.55">Hanya pemilik akun
+    <p style="font-size:11.5px;color:var(--lb3);margin-bottom:10px;line-height:1.55">Hanya Master
       yang bisa membuat, mengubah akses, mengatur ulang sandi, atau menghapus akun di sini. Pendaftaran
       mandiri sudah dimatikan — semua akun baru dibuat langsung dari sini, pakai username, bukan email.
       Ubah username atau reset sandi langsung mencabut sesi login orang itu — dia harus masuk ulang pakai
