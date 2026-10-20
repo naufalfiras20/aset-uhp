@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="id" data-theme="light">
+<html lang="id" data-theme="dark">
 <head>
+<script>try{var t=localStorage.getItem('tema');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -3242,7 +3243,7 @@ document.onkeydown=e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault(
 $('#ov').onclick=closeAll;
 $('#addB').onclick=addAsset;
 $('#gs').oninput=e=>{F.q=e.target.value;if(page!=='reg')page='reg';render();$('#gs').focus()};
-$('#thm').onclick=()=>{const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'};
+$('#thm').onclick=()=>{const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem('tema',h.dataset.theme)}catch(e){}};
 $$('#lng span').forEach(e=>e.onclick=()=>setLang(e.dataset.l));
 $('#uBox').onclick=gantiPeran;
 /* ekspor pengujian */
