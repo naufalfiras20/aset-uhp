@@ -389,7 +389,7 @@ align-items:center;justify-content:center}
   });
 })();
 </script>
-<script src="en.js"></script>
+<script src="en.js?v=20261020b"></script>
 <script src="vendor/qrcode-1.0.0.min.js"></script><script src="vendor/qr-scanner-1.4.2.umd.min.js"></script><script src="vendor/xlsx-0.18.5.full.min.js"></script>
 <script src="vendor/supabase-2.117.2.min.js"></script>
 <script>if(!window.supabase)window.__tampilGalatBoot&&window.__tampilGalatBoot('Pustaka Supabase tidak termuat — periksa koneksi atau versi iOS/Safari (butuh iOS 14 ke atas)');</script>
@@ -3326,7 +3326,7 @@ function tampilkanLogin(pesan) {
   el.style.cssText = 'position:fixed;inset:0;background:var(--bg);color:var(--lb1);display:flex;align-items:center;'
     + 'justify-content:center;z-index:999;font:14px/1.55 -apple-system,BlinkMacSystemFont,system-ui,sans-serif';
   el.style.overflow = 'hidden'; el.style.padding = '16px';
-  el.innerHTML = `
+  el.innerHTML = tr(`
   <style>
     #gerbang{--gbtn:#072B54;--gbtnt:#fff}[data-theme="dark"] #gerbang{--gbtn:var(--org);--gbtnt:#1a1008}
     #gerbang input::placeholder{color:var(--lb3)}
@@ -3386,25 +3386,35 @@ function tampilkanLogin(pesan) {
       color:var(--gbtnt);font-size:13.5px;font-weight:500;cursor:pointer;margin-bottom:8px">Masuk</button>
     <p style="font-size:11.5px;color:var(--lb3);margin:14px 0 0;line-height:1.6">Akun dibuat oleh Master. Tidak ada pendaftaran mandiri.
       Jika belum memiliki akun, silakan hubungi Master.</p>
-  </div>`;
+  </div>
+  <div style="position:absolute;top:16px;right:16px;display:flex;border:1px solid var(--sep2);border-radius:8px;overflow:hidden;font-size:12px">
+    <button data-gl="id" style="padding:5px 11px;border:0;cursor:pointer;font:inherit;background:${LANG==='id'?'var(--lb1)':'transparent'};color:${LANG==='id'?'var(--bg)':'var(--lb2)'}">ID</button>
+    <button data-gl="en" style="padding:5px 11px;border:0;cursor:pointer;font:inherit;background:${LANG==='en'?'var(--lb1)':'transparent'};color:${LANG==='en'?'var(--bg)':'var(--lb2)'}">EN</button>
+  </div>`);
   document.body.appendChild(el);
+  el.querySelectorAll('[data-gl]').forEach(b => b.onclick = () => {
+    LANG = b.dataset.gl; setBulan(); document.documentElement.lang = LANG;
+    try { localStorage.setItem('bahasa', LANG); } catch (e) {}
+    const u = el.querySelector('#gUser').value;
+    el.remove(); tampilkanLogin(pesan); document.getElementById('gUser').value = u;
+  });
 
   const jalan = async (fn) => {
     const username = document.getElementById('gUser').value.trim().toLowerCase();
     const sandi = document.getElementById('gSandi').value;
     const pesanEl = document.getElementById('gerbangPesan');
     pesanEl.style.display = 'none';
-    if (!username || !sandi) { pesanEl.textContent = 'Isi username dan kata sandi.'; pesanEl.style.display = ''; return; }
+    if (!username || !sandi) { pesanEl.textContent = tr('Isi username dan kata sandi.'); pesanEl.style.display = ''; return; }
     try {
       await fn(username, sandi);
     } catch (e) {
-      pesanEl.textContent = e.message || String(e);
+      pesanEl.textContent = tr(e.message || String(e));
       pesanEl.style.display = '';
     }
   };
   document.getElementById('gMasuk').onclick = () => jalan(async (username, sandi) => {
     const { error } = await supa.auth.signInWithPassword({ email: username + '@uhp.internal', password: sandi });
-    if (error) throw new Error(/invalid/i.test(error.message) ? 'Username atau kata sandi salah.' : error.message);
+    if (error) throw new Error(/invalid/i.test(error.message) ? tr('Username atau kata sandi salah.') : error.message);
     el.style.display = 'none';
     mulaiSetelahLogin();
   });

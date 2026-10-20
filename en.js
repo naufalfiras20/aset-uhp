@@ -508,4 +508,5 @@ const EN_TEKS=[
 ["Tugas perawatan tidak ditemukan.","Maintenance task not found."],
 ["Tugas yang sudah selesai tidak bisa dihapus. Batalkan centang selesainya dulu kalau memang salah.","A task that is already done cannot be deleted. Undo its done tick first if it was a mistake."],
 ["— {}. Satu link hanya boleh untuk satu aset.","— {}. A link may belong to only one asset."],
+["Kata sandi","Password"],
 ];
