@@ -3270,11 +3270,13 @@ function tampilkanLogin(pesan) {
   if (el) { if (pesan) el.querySelector('#gerbangPesan').textContent = pesan; el.style.display = 'flex'; return; }
   el = document.createElement('div');
   el.id = 'gerbang';
-  el.style.cssText = 'position:fixed;inset:0;background:#f6f6f8;display:flex;align-items:center;'
+  el.style.cssText = 'position:fixed;inset:0;background:var(--bg);color:var(--lb1);display:flex;align-items:center;'
     + 'justify-content:center;z-index:999;font:14px/1.55 -apple-system,BlinkMacSystemFont,system-ui,sans-serif';
-  el.style.overflow = 'hidden';
+  el.style.overflow = 'hidden'; el.style.padding = '16px';
   el.innerHTML = `
   <style>
+    #gerbang{--gbtn:#072B54;--gbtnt:#fff}[data-theme="dark"] #gerbang{--gbtn:var(--org);--gbtnt:#1a1008}
+    #gerbang input::placeholder{color:var(--lb3)}
     @keyframes gPutar{to{transform:rotate(360deg)}}
     @keyframes gPutarBalik{to{transform:rotate(-360deg)}}
     @keyframes gNapas{0%,100%{opacity:.55}50%{opacity:1}}
@@ -3282,10 +3284,10 @@ function tampilkanLogin(pesan) {
     @media (prefers-reduced-motion:reduce){#gerbang .gr,#gerbang .gn{animation:none!important}}
   </style>
   <svg aria-hidden="true" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"
-    style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
+    style="color:var(--lb1);position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
     <defs>
       <pattern id="gTitik" width="28" height="28" patternUnits="userSpaceOnUse">
-        <circle cx="1.5" cy="1.5" r="1.2" fill="#072B54" fill-opacity=".13"/></pattern>
+        <circle cx="1.5" cy="1.5" r="1.2" fill="currentColor" fill-opacity=".13"/></pattern>
       <radialGradient id="gMasker" cx="50%" cy="50%" r="60%">
         <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".55" stop-color="#fff" stop-opacity=".9"/>
         <stop offset="1" stop-color="#fff"/></radialGradient>
@@ -3293,12 +3295,12 @@ function tampilkanLogin(pesan) {
       <radialGradient id="gCahaya" cx="50%" cy="50%" r="50%">
         <stop offset="0" stop-color="#F97D05" stop-opacity=".16"/><stop offset="1" stop-color="#F97D05" stop-opacity="0"/></radialGradient>
       <radialGradient id="gBiru" cx="50%" cy="50%" r="50%">
-        <stop offset="0" stop-color="#072B54" stop-opacity=".16"/><stop offset="1" stop-color="#072B54" stop-opacity="0"/></radialGradient>
+        <stop offset="0" stop-color="#2F6FB5" stop-opacity=".16"/><stop offset="1" stop-color="#072B54" stop-opacity="0"/></radialGradient>
     </defs>
     <rect width="1600" height="900" fill="url(#gTitik)" mask="url(#gM)"/>
     <circle cx="1380" cy="130" r="420" fill="url(#gCahaya)"/>
     <circle cx="170" cy="800" r="480" fill="url(#gBiru)"/>
-    <g fill="none" stroke="#072B54" stroke-opacity=".16" stroke-width="1.2">
+    <g fill="none" stroke="currentColor" stroke-opacity=".16" stroke-width="1.2">
       <g class="gr" style="animation:gPutar 160s linear infinite">
         <circle cx="1330" cy="160" r="120"/><circle cx="1330" cy="160" r="200" stroke-dasharray="2 9"/>
         <circle cx="1330" cy="160" r="290"/><circle cx="1330" cy="160" r="390" stroke-dasharray="40 14"/></g>
@@ -3311,25 +3313,25 @@ function tampilkanLogin(pesan) {
       <path class="gn" d="M220 910 A150 150 0 0 1 70 760" stroke-opacity=".8" style="animation:gNapas 9s ease-in-out infinite"/>
     </g>
     <g fill="#F97D05"><circle cx="1210" cy="338" r="4"/><circle cx="1458" cy="276" r="3" fill-opacity=".6"/><circle cx="342" cy="604" r="3.5"/></g>
-    <g stroke="#072B54" stroke-opacity=".14" stroke-width="1.2">
+    <g stroke="currentColor" stroke-opacity=".14" stroke-width="1.2">
       <path d="M1150 790h130M1150 806h90M1150 822h130"/><path d="M320 96h130M320 112h90M320 128h130"/></g>
   </svg>
-  <div style="position:relative;width:100%;max-width:340px;padding:28px;background:#fff;border-radius:14px;
-    box-shadow:0 1px 3px rgba(0,0,0,.06),0 18px 50px rgba(7,43,84,.10)">
-    <img src="img/logo-uhp.png" alt="Upscale House Project" style="display:block;width:210px;max-width:100%;height:auto;margin:0 0 22px">
-    <h2 style="font-size:17px;margin:0 0 4px;color:#1a1a1a">Aset UHP</h2>
-    <p style="color:#8a8a94;font-size:12.5px;margin:0 0 18px">Masuk dengan username dan kata sandi.</p>
+  <div style="position:relative;width:100%;max-width:340px;padding:28px;background:var(--surf);border-radius:14px;
+    box-shadow:var(--sh2)">
+    <img class="logo-terang" src="img/logo-uhp.png" alt="Upscale House Project" style="width:210px;max-width:100%;height:auto;margin:0 0 22px"><img class="logo-gelap" src="img/logo-uhp-putih.png" alt="" style="width:210px;max-width:100%;height:auto;margin:0 0 22px">
+    <h2 style="font-size:17px;margin:0 0 4px;color:var(--lb1)">Aset UHP</h2>
+    <p style="color:var(--lb3);font-size:12.5px;margin:0 0 18px">Masuk dengan username dan kata sandi.</p>
     <div id="gerbangPesan" style="font-size:12.5px;color:#C0392B;margin-bottom:${pesan ? '10px' : '0'};
       ${pesan ? '' : 'display:none'}">${pesan || ''}</div>
     <input id="gUser" type="text" placeholder="Username" autocomplete="username" autocapitalize="off"
-      style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #e3e3e8;border-radius:8px;
+      style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--sep2);background:var(--surf2);color:var(--lb1);border-radius:8px;
       font-size:13.5px;margin-bottom:8px">
     <input id="gSandi" type="password" placeholder="Kata sandi" autocomplete="current-password"
-      style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #e3e3e8;border-radius:8px;
+      style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--sep2);background:var(--surf2);color:var(--lb1);border-radius:8px;
       font-size:13.5px;margin-bottom:14px">
-    <button id="gMasuk" style="width:100%;padding:10px;border:none;border-radius:9px;background:#072B54;
-      color:#fff;font-size:13.5px;font-weight:500;cursor:pointer;margin-bottom:8px">Masuk</button>
-    <p style="font-size:11.5px;color:#8a8a94;margin:14px 0 0;line-height:1.6">Akun dibuat oleh Master. Tidak ada pendaftaran mandiri.
+    <button id="gMasuk" style="width:100%;padding:10px;border:none;border-radius:9px;background:var(--gbtn);
+      color:var(--gbtnt);font-size:13.5px;font-weight:500;cursor:pointer;margin-bottom:8px">Masuk</button>
+    <p style="font-size:11.5px;color:var(--lb3);margin:14px 0 0;line-height:1.6">Akun dibuat oleh Master. Tidak ada pendaftaran mandiri.
       Jika belum memiliki akun, silakan hubungi Master.</p>
   </div>`;
   document.body.appendChild(el);
