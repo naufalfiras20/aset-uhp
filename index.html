@@ -3455,6 +3455,20 @@ function cekGalat(r) {
 }
 
 /* ── 4. apiMuat pengganti — susun ulang seluruh state awal ──── */
+/* Server hanya mengirim maks. 1000 baris per permintaan. Tabel yang bisa lebih besar diambil per halaman
+   (urut kolom unik) supaya tidak ada baris yang terpotong diam-diam. */
+async function semuaBaris(tabel, urut, sesuaikan) {
+  const UK = 1000, hasil = [];
+  for (let dari = 0; ; dari += UK) {
+    let q = supa.from(tabel).select('*').order(urut, { ascending: true }).range(dari, dari + UK - 1);
+    if (sesuaikan) q = sesuaikan(q);
+    const { data, error } = await q;
+    if (error) return { data: null, error };
+    hasil.push(...data);
+    if (data.length < UK) return { data: hasil, error: null };
+  }
+}
+
 async function supaMuat() {
   const { data: { user } } = await supa.auth.getUser();
   if (!user) throw new Error('Belum login.');
@@ -3463,16 +3477,16 @@ async function supaMuat() {
          opnameSesi, opnameDetail, izinRow, rutin] = await Promise.all([
     supa.from('pengguna').select('*').eq('id', user.id).single().then(r => r.data),
     supa.from('master').select('*').eq('aktif', true).order('urut'),
-    supa.from('aset').select('*'),
-    supa.from('mutasi').select('*'),
-    supa.from('pinjam').select('*'),
-    supa.from('rawat').select('*'),
-    supa.from('hapus').select('*'), supa.from('lepas').select('*').order('dicatat', { ascending: true }),
+    semuaBaris('aset', 'kode'),
+    semuaBaris('mutasi', 'id'),
+    semuaBaris('pinjam', 'id'),
+    semuaBaris('rawat', 'id'),
+    semuaBaris('hapus', 'id'), semuaBaris('lepas', 'dicatat'),
     supa.from('rekon').select('*'),
     supa.from('log_audit').select('*').order('waktu', { ascending: false }).limit(300),
     supa.from('konfig').select('*'),
     supa.from('opname_sesi').select('*'),
-    supa.from('opname_detail').select('*'),
+    semuaBaris('opname_detail', 'id'),
     supa.from('pengguna').select('id').eq('id', user.id).single().then(() => null), // placeholder, izin diambil di bawah
     supa.from('rawat_rutin').select('*'),
   ]);
