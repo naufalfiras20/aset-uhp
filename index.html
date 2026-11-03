@@ -2739,8 +2739,17 @@ function vLepas(){
 
 /* ═══════ PILIH BANYAK & LABEL MASSAL ═══════ */
 let SEL=new Set();
-function togSel(k){SEL.has(k)?SEL.delete(k):SEL.add(k);render()}
-function selAll(list){const semua=list.every(k=>SEL.has(k));semua?list.forEach(k=>SEL.delete(k)):list.forEach(k=>SEL.add(k));render()}
+/* Menggambar ulang tanpa melompat ke atas: posisi gulir halaman dan tabel registri dipulihkan */
+function renderTetap(){
+ const sc=$('.scr'),rw=document.getElementById('regWrap');
+ const a=sc?sc.scrollTop:0,b=rw?rw.scrollTop:0,c=rw?rw.scrollLeft:0;
+ render();
+ const sc2=$('.scr'),rw2=document.getElementById('regWrap');
+ if(sc2)sc2.scrollTop=a;
+ if(rw2){rw2.scrollTop=b;rw2.scrollLeft=c}
+}
+function togSel(k){SEL.has(k)?SEL.delete(k):SEL.add(k);renderTetap()}
+function selAll(list){const semua=list.every(k=>SEL.has(k));semua?list.forEach(k=>SEL.delete(k)):list.forEach(k=>SEL.add(k));renderTetap()}
 function labelMassal(){
  const ks=[...SEL].filter(k=>A(k)&&A(k).link);
  const tanpa=[...SEL].filter(k=>A(k)&&!A(k).link).length;
