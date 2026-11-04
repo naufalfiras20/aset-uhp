@@ -82,7 +82,7 @@ h1{font-size:14.5px;font-weight:600;letter-spacing:-.01em}
 .tba{display:flex;gap:7px;align-items:center}
 .scr{flex:1;overflow-y:auto}
 .ct{padding:18px 20px 60px;max-width:1180px}
-.fade{animation:f .18s ease}
+.fade{animation:none}
 @keyframes f{from{opacity:0}to{opacity:1}}
 
 /* ---- controls ---- */
@@ -1074,7 +1074,7 @@ function render(){
  $$('[data-peran]').forEach(e=>e.onclick=()=>{USER.peran=e.dataset.peran;
   log('UBAH','KONFIG','peran','Peran diubah ke '+PERAN[USER.peran].n);toast('Peran: '+PERAN[USER.peran].n,'g');closeAll();render()});
  const c=$('#ct');c.innerHTML=tr(({dash:vDash,reg:vReg,pinjam:vPinjam,rawat:vRawat,opname:vOpname,rekon:vRekon,master:vMaster,audit:vAudit,about:vAbout,lepas:vLepas,lap:vLap})[page]());
- c.classList.remove('fade');if(!TANPA_FADE&&page!==HAL_TERAKHIR){void c.offsetWidth;c.classList.add('fade')}HAL_TERAKHIR=page;
+ c.classList.remove('fade');
  terjemahStatis();
  bind();
  if(page!==RENDER_PAGE_TERAKHIR){$('.scr').scrollTop=0;RENDER_PAGE_TERAKHIR=page}
