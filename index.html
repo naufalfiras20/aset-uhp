@@ -1074,7 +1074,7 @@ function render(){
  $$('[data-peran]').forEach(e=>e.onclick=()=>{USER.peran=e.dataset.peran;
   log('UBAH','KONFIG','peran','Peran diubah ke '+PERAN[USER.peran].n);toast('Peran: '+PERAN[USER.peran].n,'g');closeAll();render()});
  const c=$('#ct');c.innerHTML=tr(({dash:vDash,reg:vReg,pinjam:vPinjam,rawat:vRawat,opname:vOpname,rekon:vRekon,master:vMaster,audit:vAudit,about:vAbout,lepas:vLepas,lap:vLap})[page]());
- c.classList.remove('fade');void c.offsetWidth;c.classList.add('fade');
+ c.classList.remove('fade');if(!TANPA_FADE){void c.offsetWidth;c.classList.add('fade')}
  terjemahStatis();
  bind();
  if(page!==RENDER_PAGE_TERAKHIR){$('.scr').scrollTop=0;RENDER_PAGE_TERAKHIR=page}
@@ -2740,10 +2740,11 @@ function vLepas(){
 /* ═══════ PILIH BANYAK & LABEL MASSAL ═══════ */
 let SEL=new Set();
 /* Menggambar ulang tanpa melompat ke atas: posisi gulir halaman dan tabel registri dipulihkan */
+let TANPA_FADE=false;
 function renderTetap(){
  const sc=$('.scr'),rw=document.getElementById('regWrap');
  const a=sc?sc.scrollTop:0,b=rw?rw.scrollTop:0,c=rw?rw.scrollLeft:0;
- render();
+ TANPA_FADE=true;try{render()}finally{TANPA_FADE=false}
  const sc2=$('.scr'),rw2=document.getElementById('regWrap');
  if(sc2)sc2.scrollTop=a;
  if(rw2){rw2.scrollTop=b;rw2.scrollLeft=c}
