@@ -1,7 +1,7 @@
 /* English strings. Each entry is a whole phrase or sentence, never a fragment.
    "{}" stands for a value that changes (a number, a name); it is carried over in order.
    "[a|b]" picks a or b depending on whether the first {} equals 1 (singular|plural). */
-const EN_TEKS=[
+const EN_TEKS=[["Centang baris di tabel untuk cetak label, pindah lokasi, atau edit massal.","Tick rows in the table to print labels, move locations, or bulk edit."],
 /* ── Navigation, titles ── */
 ["Operasional","Operations"],["Pengendalian","Control"],["Sistem","System"],["Laporan","Reports"],
 ["Dashboard","Dashboard"],["Registri aset","Asset registry"],["Peminjaman","Borrowing"],["Perawatan","Maintenance"],

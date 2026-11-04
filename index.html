@@ -393,7 +393,7 @@ align-items:center;justify-content:center}
   });
 })();
 </script>
-<script src="en.js?v=20261020b"></script>
+<script src="en.js?v=20261104a"></script>
 <script src="vendor/qrcode-1.0.0.min.js"></script><script src="vendor/qr-scanner-1.4.2.umd.min.js"></script><script src="vendor/xlsx-0.18.5.full.min.js"></script>
 <script src="vendor/supabase-2.117.2.min.js"></script>
 <script>if(!window.supabase)window.__tampilGalatBoot&&window.__tampilGalatBoot('Pustaka Supabase tidak termuat — periksa koneksi atau versi iOS/Safari (butuh iOS 14 ke atas)');</script>
@@ -1257,14 +1257,14 @@ function vReg(){
   <button class="b s" id="exp">${ic('dl')}Ekspor CSV</button>
   ${can('lihatFin')?`<button class="b s" id="expAcc" title="Centang aset di tabel dulu. Aset rusak/mengkhawatirkan otomatis tidak ikut.">${ic('dl')}Ekspor untuk Accurate${SEL.size?` (${SEL.size})`:''}</button>`:''}
  </div>
- ${SEL.size?`<div class="cd" style="margin-bottom:12px;background:var(--nvy)"><div class="cdb" style="padding:9px 13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+ ${SEL.size?`<div class="cd" style="margin-bottom:12px;min-height:50px;background:var(--nvy)"><div class="cdb" style="padding:9px 13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">
   <span style="color:#fff;font-size:12.5px;font-weight:500">${SEL.size} dipilih</span>
   <div style="flex:1"></div>
   <button class="b s" id="mLabel">${ic('print')}Cetak label</button>
   ${can('editOps')?`<button class="b s" id="mCetak">${ic('check')}Tandai sudah dicetak</button><button class="b s" id="mTempel">${ic('check')}Tandai sudah ditempel</button><button class="b s" id="mLok2">${ic('pin')}Pindah lokasi</button><button class="b s" id="mPola">${ic('tag')}Isi link dari pola</button>`:''}
   ${can('editOps')||can('editFin')?`<button class="b s" id="mEdit">${ic('edit')}Edit massal</button>`:''}
   <button class="b s" id="mClr">Batal pilih</button>
- </div></div>`:''}
+ </div></div>`:`<div style="margin-bottom:12px;min-height:50px;display:flex;align-items:center;font-size:12.5px;color:var(--lb3)">Centang baris di tabel untuk cetak label, pindah lokasi, atau edit massal.</div>`}
  <div class="cd" style="margin:0"><div id="regWrap" style="overflow:auto">
  <table><thead><tr><th style="width:30px"><input type="checkbox" id="selAll" ${r.length&&r.every(x=>SEL.has(x.kode))?'checked':''} style="cursor:pointer"></th>${th('kode','Kode')}${KOL_REG.filter(c=>kolTampil(c.k)).map(c=>c.th()).join('')}</tr></thead>
  <tbody>${r.length?r.map(x=>{const l=loanOf(x.kode),tl=l&&late(l)>0;
